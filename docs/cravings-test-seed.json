@@ -1,0 +1,466 @@
+{
+  "_about": "Snibble — first 30 daily cravings. Calendar-cycle rotates through these in order, day 1 → day 30 → day 1 again. Each entry has 3 phases (the within-session difficulty climb that delivers the 'gets harder as pet matures' feel). Letter trays sized 12–14, vetted to contain 5+ valid solutions for phase 1, 3+ for phase 2, 2+ for phase 3.",
+  "_legend": {
+    "tier": "intuitive difficulty rating: easy / medium / hard",
+    "phases[].rule": "the base craving for the day",
+    "phases[].extra": "additional rule layered on for this phase",
+    "phases[].bonus": "final tightening layered on for the adult phase",
+    "letters": "tray of 12–14 letters seeded for the day",
+    "sampleSolutions": "valid words that satisfy each phase — used for QA, not shown in-game"
+  },
+  "_difficultyMix": "10 easy, 12 medium, 8 hard — distributed throughout the cycle (not strictly easy-to-hard) so a new player who joins on any day gets variety quickly",
+  "season": 1,
+  "cycleLengthDays": 30,
+  "cravings": [
+    {
+      "day": 1,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -OW" },
+        { "rule": "ends in -OW", "extra": "4+ letters" },
+        { "rule": "ends in -OW", "extra": "4+ letters", "bonus": "contains R or L" }
+      ],
+      "letters": ["G","L","O","O","W","S","H","B","R","M","N","P"],
+      "sampleSolutions": {
+        "phase1": ["BOW","HOW","LOW","MOW","NOW","ROW","SOW","WOW"],
+        "phase2": ["BLOW","BROW","CHOW","FLOW","GLOW","GROW","PLOW","SHOW","SLOW","SNOW"],
+        "phase3": ["BLOW","BROW","FLOW","GLOW","GROW","PLOW","SLOW"]
+      }
+    },
+    {
+      "day": 2,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -AT" },
+        { "rule": "ends in -AT", "extra": "4+ letters" },
+        { "rule": "ends in -AT", "extra": "4+ letters", "bonus": "starts with a consonant cluster (e.g. CH, FL, SL, BR)" }
+      ],
+      "letters": ["A","A","T","B","C","H","F","M","P","R","S","L","E"],
+      "sampleSolutions": {
+        "phase1": ["BAT","CAT","FAT","HAT","MAT","PAT","RAT","SAT"],
+        "phase2": ["CHAT","FLAT","BRAT","SLAT","THAT","SCAT"],
+        "phase3": ["CHAT","FLAT","BRAT","SLAT","SCAT"]
+      }
+    },
+    {
+      "day": 3,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -IN" },
+        { "rule": "ends in -IN", "extra": "4+ letters" },
+        { "rule": "ends in -IN", "extra": "4+ letters", "bonus": "contains an S, K, or P" }
+      ],
+      "letters": ["I","I","N","B","F","P","S","T","W","C","H","G","K","R"],
+      "sampleSolutions": {
+        "phase1": ["BIN","FIN","PIN","SIN","TIN","WIN"],
+        "phase2": ["CHIN","GRIN","SKIN","SPIN","TWIN","THIN"],
+        "phase3": ["SKIN","SPIN"]
+      }
+    },
+    {
+      "day": 4,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -OG" },
+        { "rule": "ends in -OG", "extra": "4+ letters" },
+        { "rule": "ends in -OG", "extra": "4+ letters", "bonus": "starts with F, S, or C" }
+      ],
+      "letters": ["O","O","G","B","C","D","F","H","J","L","R","S","M","N"],
+      "sampleSolutions": {
+        "phase1": ["BOG","COG","DOG","FOG","HOG","JOG","LOG"],
+        "phase2": ["FROG","CLOG","SMOG","SLOG","BLOG"],
+        "phase3": ["FROG","CLOG","SMOG","SLOG"]
+      }
+    },
+    {
+      "day": 5,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains -OO-" },
+        { "rule": "contains -OO-", "extra": "4+ letters" },
+        { "rule": "contains -OO-", "extra": "4+ letters", "bonus": "ends in a consonant" }
+      ],
+      "letters": ["O","O","B","C","K","L","T","P","F","M","N","R","D","S"],
+      "sampleSolutions": {
+        "phase1": ["BOO","COO","MOO","TOO","ZOO"],
+        "phase2": ["BOOK","COOK","LOOK","TOOK","FOOD","GOOD","MOOD","ROOM","BOOM","MOON","NOON","SOON","POOL","TOOL","DOOM"],
+        "phase3": ["BOOK","COOK","LOOK","TOOK","FOOD","GOOD","MOOD","ROOM","BOOM","MOON","NOON","SOON","POOL","TOOL","DOOM"]
+      }
+    },
+    {
+      "day": 6,
+      "tier": "easy",
+      "phases": [
+        { "rule": "starts with B" },
+        { "rule": "starts with B", "extra": "4+ letters" },
+        { "rule": "starts with B", "extra": "4+ letters", "bonus": "ends in a vowel" }
+      ],
+      "letters": ["B","A","E","I","O","R","T","L","N","S","K","C","D","M"],
+      "sampleSolutions": {
+        "phase1": ["BAT","BIT","BIG","BAD","BAN","BED","BEE","BAR","BIN","BET"],
+        "phase2": ["BIRD","BORN","BAND","BARK","BARE","BASE","BATE","BOAT","BAKE","BARN","BEAM","BEAD"],
+        "phase3": ["BARE","BASE","BATE","BAKE","BANE","BIDE","BORE","BONE","BODE"]
+      }
+    },
+    {
+      "day": 7,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -Y" },
+        { "rule": "ends in -Y", "extra": "4+ letters" },
+        { "rule": "ends in -Y", "extra": "5+ letters", "bonus": "ends in -LY or -RY" }
+      ],
+      "letters": ["Y","A","E","I","O","R","T","L","N","S","P","K","M","D","H"],
+      "sampleSolutions": {
+        "phase1": ["DAY","MAY","SAY","RAY","KEY","DRY","TRY","SKY","TOY","HEY","ANY"],
+        "phase2": ["EASY","HOLY","LADY","TIDY","STAY","TINY","ARMY","ONLY","STORY","TASTY","HAIRY"],
+        "phase3": ["EARLY","DAILY","STORY","HAIRY","LATELY","REALLY","TIMELY","STEAMY","NEARLY","DREAMY"]
+      }
+    },
+    {
+      "day": 8,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -ED" },
+        { "rule": "ends in -ED", "extra": "5+ letters" },
+        { "rule": "ends in -ED", "extra": "5+ letters", "bonus": "contains an L" }
+      ],
+      "letters": ["E","D","A","I","O","R","T","L","N","S","K","P","M","H"],
+      "sampleSolutions": {
+        "phase1": ["BED","FED","LED","RED","WED"],
+        "phase2": ["ASKED","LIKED","NAMED","LISTED","PAINTED","RAINED","HEATED","TASTED","TALKED","WAITED","PAINTED"],
+        "phase3": ["LIKED","HAILED","LISTED","TALKED","SAILED","HEALED","BOILED","FAILED","TOILED","SOILED"]
+      }
+    },
+    {
+      "day": 9,
+      "tier": "easy",
+      "phases": [
+        { "rule": "exactly 4 letters" },
+        { "rule": "exactly 4 letters", "extra": "starts with a consonant" },
+        { "rule": "exactly 4 letters", "extra": "starts with a consonant", "bonus": "contains -EA- or -OO- or -OA-" }
+      ],
+      "letters": ["A","E","I","O","R","T","L","N","S","P","M","K","B","D"],
+      "sampleSolutions": {
+        "phase1": ["NAME","PILE","TIME","ROSE","RAMP","SALT","NOSE","MILE","TONE","LANE","RIDE","LAKE","TAPE"],
+        "phase2": ["NAME","PILE","TIME","ROSE","RAMP","SALT","NOSE","MILE","TONE","LANE","RIDE","LAKE","TAPE","BORE","DARE"],
+        "phase3": ["BEAM","BEAD","BEAN","REAL","SEAT","TEAM","ROAD","ROAM","SOAP","MOAN","TOAD","BOOK","MOON","POOL","NOON"]
+      }
+    },
+    {
+      "day": 10,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains a double letter (e.g. -OO-, -EE-, -LL-, -SS-)" },
+        { "rule": "contains a double letter", "extra": "4+ letters" },
+        { "rule": "contains a double letter", "extra": "5+ letters" }
+      ],
+      "letters": ["A","E","O","I","B","K","T","R","L","S","P","F","N","M","D"],
+      "sampleSolutions": {
+        "phase1": ["TOO","SEE","BEE","ALL","ADD","ODD","INN","OFF"],
+        "phase2": ["BOOK","TREE","BELL","FALL","KISS","PASS","FOOD","FOOL","DOLL","MILL","TOOL"],
+        "phase3": ["TREES","BOOKS","BELLS","FALLS","STILL","SMALL","SPOOL","BLEED","BLOOM","STOOL"]
+      }
+    },
+    {
+      "day": 11,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -ING" },
+        { "rule": "ends in -ING", "extra": "5+ letters" },
+        { "rule": "ends in -ING", "extra": "5+ letters", "bonus": "starts with S, T, or B" }
+      ],
+      "letters": ["I","N","G","S","T","B","R","K","A","E","O","L","P","H"],
+      "sampleSolutions": {
+        "phase1": ["KING","RING","SING","WING","PING","BING"],
+        "phase2": ["BRING","STING","SPRING","STRING","TAKING","RIDING","BAKING","SHINING","TELLING","SITTING"],
+        "phase3": ["BRING","STING","SPRING","STRING","TAKING","TELLING","SITTING"]
+      }
+    },
+    {
+      "day": 12,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -ER" },
+        { "rule": "ends in -ER", "extra": "5+ letters" },
+        { "rule": "ends in -ER", "extra": "5+ letters", "bonus": "is a person/role/thing-doer (e.g. baker, sailor, teacher)" }
+      ],
+      "letters": ["E","R","A","I","O","B","K","S","T","L","N","P","H","M","C"],
+      "sampleSolutions": {
+        "phase1": ["HER","PER"],
+        "phase2": ["BAKER","BIKER","HIKER","TIMER","NEVER","OTHER","WATER","LATER","PAPER","SISTER","CARTER"],
+        "phase3": ["BAKER","BIKER","HIKER","SISTER","TEACHER","SAILER","PAINTER","SINGER","CARRIER"]
+      }
+    },
+    {
+      "day": 13,
+      "tier": "easy",
+      "phases": [
+        { "rule": "starts with S" },
+        { "rule": "starts with S", "extra": "4+ letters" },
+        { "rule": "starts with S", "extra": "5+ letters", "bonus": "ends in a vowel" }
+      ],
+      "letters": ["S","A","E","I","O","T","L","N","R","P","K","M","H","C"],
+      "sampleSolutions": {
+        "phase1": ["SAT","SET","SIT","SON","SUN","SAY","SEA","SAW","SIR","SIP"],
+        "phase2": ["SAID","SALT","SAME","SAND","SANE","SANK","SEAL","SEAM","SEAT","SHIP","SHOT","SLAM","SLIP","SOAK","SOAR","SOCK"],
+        "phase3": ["SCALE","SHAPE","SHARE","SHINE","SLATE","SMOKE","SNAKE","SPACE","SPARE","SPORE","SPADE","STORE","STORE"]
+      }
+    },
+    {
+      "day": 14,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains -EA-" },
+        { "rule": "contains -EA-", "extra": "4+ letters" },
+        { "rule": "contains -EA-", "extra": "5+ letters" }
+      ],
+      "letters": ["E","A","B","R","T","L","N","S","P","K","M","H","D","I"],
+      "sampleSolutions": {
+        "phase1": ["EAR","EAT","SEA","TEA","PEA"],
+        "phase2": ["BEAD","BEAM","BEAN","BEAR","BEAT","DEAR","HEAD","HEAR","HEAT","LEAD","LEAF","LEAK","LEAN","LEAP","MEAL","MEAN","MEAT","NEAR","NEAT","PEAK","REAL","SEAL","SEAM","SEAT","TEAM","WEAR"],
+        "phase3": ["BEACH","BEAST","BREAD","BREAK","CLEAN","CLEAR","CREAM","DEALT","DREAM","HEARD","HEART","LEAST","MEANT","PEACH","PEARL","REACH","SPEAK","STEAL","STEAM","TREAT","WEAVE","WHEAT"]
+      }
+    },
+    {
+      "day": 15,
+      "tier": "hard",
+      "phases": [
+        { "rule": "ends in -LY" },
+        { "rule": "ends in -LY", "extra": "5+ letters" },
+        { "rule": "ends in -LY", "extra": "6+ letters" }
+      ],
+      "letters": ["L","Y","A","E","I","O","R","T","N","S","P","K","M","H","D"],
+      "sampleSolutions": {
+        "phase1": ["FLY","PLY","SLY"],
+        "phase2": ["EARLY","DAILY","ONLY","ALLY","HOLY","ITALY","JOLLY","REALLY","ORALLY","NEARLY","RARELY"],
+        "phase3": ["EARLY","NEARLY","REALLY","RARELY","ORALLY","SAINTLY","STATELY","STEELILY"]
+      }
+    },
+    {
+      "day": 16,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -EE" },
+        { "rule": "ends in -EE", "extra": "4+ letters" },
+        { "rule": "ends in -EE", "extra": "5+ letters" }
+      ],
+      "letters": ["E","E","T","R","B","S","P","F","K","N","H","L","A","G"],
+      "sampleSolutions": {
+        "phase1": ["BEE","FEE","SEE","TEE","FLEE","FREE","TREE"],
+        "phase2": ["FLEE","FREE","TREE","KNEE","AGREE","THREE","SPREE"],
+        "phase3": ["AGREE","THREE","SETTEE","TRUSTEE","REFEREE"]
+      }
+    },
+    {
+      "day": 17,
+      "tier": "medium",
+      "phases": [
+        { "rule": "exactly 5 letters" },
+        { "rule": "exactly 5 letters", "extra": "starts with a consonant" },
+        { "rule": "exactly 5 letters", "extra": "contains a double letter" }
+      ],
+      "letters": ["A","E","I","O","R","T","L","N","S","P","K","B","C","D"],
+      "sampleSolutions": {
+        "phase1": ["ABOUT","SLATE","CRATE","TRAIN","PAINT","SAINT","STAIR","PRIDE","BRAIN","CLEAR","HEART","DREAM","TABLE","CABLE","NOBLE"],
+        "phase2": ["SLATE","CRATE","TRAIN","PAINT","SAINT","STAIR","PRIDE","BRAIN","CLEAR","HEART","DREAM","TABLE","CABLE","NOBLE","STORK","BRICK","CLOCK","BLOCK"],
+        "phase3": ["SPILL","STILL","SMALL","STALL","BLOOM","STOOD","STOOL","SPOOL","BLEED","SLEEP"]
+      }
+    },
+    {
+      "day": 18,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains -CH-" },
+        { "rule": "contains -CH-", "extra": "4+ letters" },
+        { "rule": "contains -CH-", "extra": "5+ letters" }
+      ],
+      "letters": ["C","H","A","E","I","O","R","T","L","N","S","P","M","B"],
+      "sampleSolutions": {
+        "phase1": ["CHI"],
+        "phase2": ["CHAT","CHIN","CHOP","INCH","RICH","SUCH","ACHE","EACH","ARCH"],
+        "phase3": ["CHAIR","CHARM","CHART","CHASE","CHEAP","CHECK","CHEST","CHILD","CHILL","CHINA","CHOSE","BEACH","REACH","TEACH","TORCH","MARCH"]
+      }
+    },
+    {
+      "day": 19,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -EN" },
+        { "rule": "ends in -EN", "extra": "4+ letters" },
+        { "rule": "ends in -EN", "extra": "4+ letters", "bonus": "starts with O or T" }
+      ],
+      "letters": ["E","N","A","I","O","T","L","R","S","P","K","M","H","V"],
+      "sampleSolutions": {
+        "phase1": ["DEN","HEN","MEN","PEN","TEN"],
+        "phase2": ["EVEN","OPEN","OVEN","SEEN","THEN","WHEN","TAKEN","OFTEN"],
+        "phase3": ["OPEN","OVEN","THEN","TAKEN","OFTEN","TOKEN"]
+      }
+    },
+    {
+      "day": 20,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -OOK" },
+        { "rule": "ends in -OOK", "extra": "4+ letters" },
+        { "rule": "ends in -OOK", "extra": "5+ letters" }
+      ],
+      "letters": ["O","O","K","B","C","L","H","T","R","S","P","N","M","E"],
+      "sampleSolutions": {
+        "phase1": [],
+        "phase2": ["BOOK","COOK","HOOK","LOOK","NOOK","ROOK","TOOK"],
+        "phase3": ["BROOK","CROOK","SHOOK","SPOOK","STOOK"]
+      }
+    },
+    {
+      "day": 21,
+      "tier": "hard",
+      "phases": [
+        { "rule": "starts with TH-" },
+        { "rule": "starts with TH-", "extra": "4+ letters" },
+        { "rule": "starts with TH-", "extra": "5+ letters" }
+      ],
+      "letters": ["T","H","A","E","I","O","R","N","S","L","P","K","M","B"],
+      "sampleSolutions": {
+        "phase1": ["THE"],
+        "phase2": ["THAN","THAT","THEM","THEN","THIN","THIS","THUS"],
+        "phase3": ["THANK","THEIR","THERE","THESE","THICK","THINK","THORN","THOSE","THREE","THROW","THIRTY"]
+      }
+    },
+    {
+      "day": 22,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains -OU-" },
+        { "rule": "contains -OU-", "extra": "4+ letters" },
+        { "rule": "contains -OU-", "extra": "5+ letters" }
+      ],
+      "letters": ["O","U","A","E","I","R","T","L","N","S","P","K","M","H","B","D"],
+      "sampleSolutions": {
+        "phase1": ["OUR","OUT"],
+        "phase2": ["DOUR","FOUR","HOUR","LOUD","POUR","SOUL","SOUR","TOUR","BOUT","ROUT","SHOUT","ABOUT"],
+        "phase3": ["ABOUT","ROUND","SOUND","MOUND","COUNT","MOUNT","SHOUT","STOUT","TROUT","HOUND","COUNTRY","HOUSE","MOUSE"]
+      }
+    },
+    {
+      "day": 23,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -EAR" },
+        { "rule": "ends in -EAR", "extra": "4+ letters" },
+        { "rule": "ends in -EAR", "extra": "5+ letters" }
+      ],
+      "letters": ["E","A","R","B","D","H","N","P","S","T","W","L","C","K"],
+      "sampleSolutions": {
+        "phase1": ["EAR"],
+        "phase2": ["BEAR","DEAR","FEAR","GEAR","HEAR","NEAR","PEAR","REAR","SEAR","TEAR","WEAR","YEAR"],
+        "phase3": ["CLEAR","SHEAR","SMEAR","SPEAR","SWEAR","ENDEAR","NUCLEAR"]
+      }
+    },
+    {
+      "day": 24,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -ICK" },
+        { "rule": "ends in -ICK", "extra": "4+ letters" },
+        { "rule": "ends in -ICK", "extra": "5+ letters" }
+      ],
+      "letters": ["I","C","K","B","D","P","S","T","R","L","N","H","W","A"],
+      "sampleSolutions": {
+        "phase1": [],
+        "phase2": ["KICK","LICK","NICK","PICK","RICK","SICK","TICK","WICK"],
+        "phase3": ["BRICK","CHICK","CLICK","CRICK","PRICK","SLICK","STICK","TRICK","THICK"]
+      }
+    },
+    {
+      "day": 25,
+      "tier": "hard",
+      "phases": [
+        { "rule": "starts with PR-" },
+        { "rule": "starts with PR-", "extra": "4+ letters" },
+        { "rule": "starts with PR-", "extra": "5+ letters" }
+      ],
+      "letters": ["P","R","A","E","I","O","T","L","N","S","K","M","B","D"],
+      "sampleSolutions": {
+        "phase1": ["PRO","PRY"],
+        "phase2": ["PRAM","PRAY","PREP","PREY","PRIM","PROD","PROP","PROS"],
+        "phase3": ["PRIDE","PRINT","PRIZE","PROBE","PROSE","PROVE","PRESS","PRIME","PRAISE","PRIEST"]
+      }
+    },
+    {
+      "day": 26,
+      "tier": "easy",
+      "phases": [
+        { "rule": "ends in -ALL" },
+        { "rule": "ends in -ALL", "extra": "4+ letters" },
+        { "rule": "ends in -ALL", "extra": "5+ letters" }
+      ],
+      "letters": ["A","L","L","B","C","F","H","M","P","S","T","W","R","I"],
+      "sampleSolutions": {
+        "phase1": ["ALL"],
+        "phase2": ["BALL","CALL","FALL","HALL","MALL","PALL","TALL","WALL"],
+        "phase3": ["SMALL","STALL","SHALL","SPALL","INSTALL","RECALL"]
+      }
+    },
+    {
+      "day": 27,
+      "tier": "medium",
+      "phases": [
+        { "rule": "contains -SH-" },
+        { "rule": "contains -SH-", "extra": "4+ letters" },
+        { "rule": "contains -SH-", "extra": "5+ letters" }
+      ],
+      "letters": ["S","H","A","E","I","O","R","T","L","N","P","K","M","B"],
+      "sampleSolutions": {
+        "phase1": ["ASH","SHE"],
+        "phase2": ["DASH","DISH","FISH","GASH","HASH","LASH","MASH","RASH","WISH","SHIN","SHIP","SHOT","SHOP","SHOE"],
+        "phase3": ["SHAPE","SHARE","SHARK","SHEET","SHELL","SHINE","SHIRT","SHOCK","SHORE","SHORT","SHOWN","BRASH","CRASH","FLASH","FRESH","TRASH"]
+      }
+    },
+    {
+      "day": 28,
+      "tier": "hard",
+      "phases": [
+        { "rule": "any word, 6+ letters" },
+        { "rule": "any word, 6+ letters", "extra": "contains 2+ vowels" },
+        { "rule": "any word, 7+ letters" }
+      ],
+      "letters": ["A","E","I","O","R","T","L","N","S","P","K","M","B","H"],
+      "sampleSolutions": {
+        "phase1": ["AROUND","SIMPLE","TEMPLE","HONEST","MORTAL","BOTTLE","STREAM","NORMAL"],
+        "phase2": ["AROUND","HOSTILE","SIMPLE","TEMPLE","HONEST","MORTAL","BOTTLE","REALISE","PIONEER","ANIMATE","ATELIER"],
+        "phase3": ["HOSTILE","REALISM","PIONEER","ANIMATE","HABITAT","INSTANT","STARTER","RAINBOW"]
+      }
+    },
+    {
+      "day": 29,
+      "tier": "medium",
+      "phases": [
+        { "rule": "ends in -ARK" },
+        { "rule": "ends in -ARK", "extra": "4+ letters" },
+        { "rule": "ends in -ARK", "extra": "5+ letters" }
+      ],
+      "letters": ["A","R","K","B","D","H","L","M","P","S","T","W","C","E"],
+      "sampleSolutions": {
+        "phase1": ["ARK"],
+        "phase2": ["BARK","DARK","HARK","LARK","MARK","PARK","SARK"],
+        "phase3": ["CLARK","SHARK","STARK","SPARK","CLERK"]
+      }
+    },
+    {
+      "day": 30,
+      "tier": "hard",
+      "phases": [
+        { "rule": "ends in -EST" },
+        { "rule": "ends in -EST", "extra": "5+ letters" },
+        { "rule": "ends in -EST", "extra": "5+ letters", "bonus": "is a superlative (e.g. tallest, fastest)" }
+      ],
+      "letters": ["E","S","T","A","I","O","R","L","N","P","K","M","B","H"],
+      "sampleSolutions": {
+        "phase1": ["BEST","NEST","PEST","REST","TEST","VEST","WEST","ZEST"],
+        "phase2": ["BEAST","CREST","FEAST","FOREST","GUEST","INVEST","LEAST","PRIEST","ARREST","HONEST"],
+        "phase3": ["BIGGEST","BLANDEST","BLUEST","BRAVEST","BRIGHTEST","CLOSEST","FASTEST","FINEST","FRESHEST","KINDEST","LARGEST","LATEST","NEWEST","OLDEST","RICHEST","SAFEST","SIMPLEST","SLOWEST","SMARTEST","TALLEST"]
+      }
+    }
+  ]
+}

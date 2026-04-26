@@ -1,0 +1,19 @@
+{
+  "name": "Snibble",
+  "short_name": "Snibble",
+  "description": "A cozy daily word pet.",
+  "start_url": "/snibble/",
+  "scope": "/snibble/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#7c3aed",
+  "background_color": "#fef3c7",
+  "icons": [
+    {
+      "src": "/snibble/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(180deg, #fef3c7 0%, #fbcfe8 50%, #e9d5ff 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/70 rounded-2xl border border-wordy-200 shadow-sm;
+  }
+  .font-display {
+    font-family: 'Fredoka One', cursive;
+  }
+}
