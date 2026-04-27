@@ -14,10 +14,23 @@
 
 @layer components {
   .card {
-    @apply bg-white/80 rounded-2xl border border-wordy-100 shadow-sm;
+    @apply bg-white rounded-2xl border border-wordy-100 shadow-sm;
   }
   .font-display {
     font-family: 'Fredoka One', cursive;
+  }
+
+  /* Settings cog dropdown — matches Wordy's SettingsModal layout.
+     Each row is a label + action button on opposite ends. */
+  .settings-dropdown {
+    @apply absolute right-0 top-full mt-2 w-64 z-50 p-1 shadow-lg;
+    animation: snibble-dropdown-in 0.12s ease-out;
+  }
+  .settings-row {
+    @apply flex items-center justify-between px-3 py-2.5 rounded-xl;
+  }
+  .settings-row + .settings-row {
+    @apply border-t border-wordy-100;
   }
 
   /* Pet idle bounce — applied to the SVG. */
@@ -57,4 +70,9 @@
   45%  { transform: translateY(-12px) scale(0.95, 1.08); }
   70%  { transform: translateY(-2px) scale(1.02, 0.99); }
   100% { transform: translateY(0)   scale(1, 1); }
+}
+
+@keyframes snibble-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

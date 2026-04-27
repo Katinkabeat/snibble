@@ -152,6 +152,19 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
 
   return (
     <>
+      {/* Inline back-to-lobby */}
+      <div className="mb-2">
+        <button
+          onClick={() => {
+            window.history.pushState({}, '', window.location.pathname)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+          }}
+          className="text-sm font-bold text-wordy-400 hover:text-wordy-700 transition-colors"
+        >
+          ← Lobby
+        </button>
+      </div>
+
       {/* Pet habitat */}
       <div className="bg-gradient-to-b from-pink-100 to-wordy-200 rounded-3xl border-2 border-wordy-700 p-4 shadow-tile">
         <div className={`mx-auto max-w-[240px] ${chomping ? 'snibble-chomp' : ''}`}>
