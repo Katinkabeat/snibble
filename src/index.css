@@ -18,12 +18,17 @@
     font-family: 'Fredoka One', cursive;
   }
 
-  /* Pet idle bounce + blink — applied to the SVG wrapper. */
+  /* Pet idle bounce — applied to the whole SVG. */
   .snibble-pet {
     animation: snibble-idle 3s ease-in-out infinite;
     transform-origin: 50% 95%;
   }
-  .snibble-pet .snibble-pupil {
+  /* Blink — scales the entire eye group around its own centre.
+     transform-box: fill-box makes transform-origin resolve against
+     the element's own bounding box; without it, SVG resolves it
+     against the canvas and the eyes slide down the stalks. */
+  .snibble-pet .snibble-eye {
+    transform-box: fill-box;
     transform-origin: center;
     animation: snibble-blink 5s infinite;
   }
@@ -36,5 +41,5 @@
 
 @keyframes snibble-blink {
   0%, 92%, 100% { transform: scaleY(1); }
-  96%           { transform: scaleY(0.1); }
+  96%           { transform: scaleY(0.05); }
 }

@@ -45,20 +45,27 @@ const SharedDefs = () => (
   </defs>
 )
 
-const Eyes = ({ leftStalk, rightStalk, leftEye, rightEye, isClosed = false }) => (
+const Eye = ({ cx, cy, r }) => (
+  // Each eye wrapped in a <g> so the blink animation can scale the
+  // whole eye (white + pupil + shine) as one unit. The CSS sets
+  // transform-box: fill-box + transform-origin: center so it scales
+  // around the eye's own centre instead of the SVG canvas's centre.
+  <g
+    className="snibble-eye"
+    style={{ '--eye-cx': `${cx}px`, '--eye-cy': `${cy}px` }}
+  >
+    <circle cx={cx} cy={cy} r={r} fill="white" stroke="#581c87" strokeWidth="2.2" />
+    <circle cx={cx + 1} cy={cy + 1} r={r * 0.42} fill="#581c87" />
+    <circle cx={cx + 1.2} cy={cy - 0.6} r={r * 0.18} fill="white" />
+  </g>
+)
+
+const Eyes = ({ leftStalk, rightStalk, leftEye, rightEye }) => (
   <>
     <path d={leftStalk} stroke="#581c87" strokeWidth="3" fill="none" strokeLinecap="round" />
     <path d={rightStalk} stroke="#581c87" strokeWidth="3" fill="none" strokeLinecap="round" />
-    <circle cx={leftEye.cx} cy={leftEye.cy} r={leftEye.r} fill="white" stroke="#581c87" strokeWidth="2.2" />
-    <circle cx={rightEye.cx} cy={rightEye.cy} r={rightEye.r} fill="white" stroke="#581c87" strokeWidth="2.2" />
-    {!isClosed && (
-      <>
-        <circle className="snibble-pupil" cx={leftEye.cx + 1} cy={leftEye.cy + 1} r={leftEye.r * 0.42} fill="#581c87" />
-        <circle className="snibble-pupil" cx={rightEye.cx + 1} cy={rightEye.cy + 1} r={rightEye.r * 0.42} fill="#581c87" />
-        <circle cx={leftEye.cx + 1.2} cy={leftEye.cy - 0.6} r={leftEye.r * 0.18} fill="white" />
-        <circle cx={rightEye.cx + 1.2} cy={rightEye.cy - 0.6} r={rightEye.r * 0.18} fill="white" />
-      </>
-    )}
+    <Eye {...leftEye} />
+    <Eye {...rightEye} />
   </>
 )
 
