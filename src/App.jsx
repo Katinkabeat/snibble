@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase.js'
+import PetPreview from './components/PetPreview.jsx'
 
 // SQ hub URL — unauthed visitors get bounced here so the hub handles login.
 // Includes a `return` query param so they come back to /snibble/ after.
 const HUB_URL = '/games/'
+
+// Returns the value of a single query-string parameter (or null).
+function queryParam(name) {
+  const m = window.location.search.match(new RegExp(`[?&]${name}=([^&]+)`))
+  return m ? decodeURIComponent(m[1]) : null
+}
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -42,6 +49,11 @@ export default function App() {
     window.location.replace(`${HUB_URL}?return=${returnUrl}`)
     return null
   }
+
+  // Admin-only dev view for previewing pet artwork — anyone authed
+  // can see it for now. We're behind the SQ admin gate via the hub
+  // anyway during build mode.
+  if (queryParam('view') === 'pets') return <PetPreview />
 
   return <PlaceholderShell user={session.user} />
 }

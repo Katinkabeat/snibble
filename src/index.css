@@ -17,4 +17,24 @@
   .font-display {
     font-family: 'Fredoka One', cursive;
   }
+
+  /* Pet idle bounce + blink — applied to the SVG wrapper. */
+  .snibble-pet {
+    animation: snibble-idle 3s ease-in-out infinite;
+    transform-origin: 50% 95%;
+  }
+  .snibble-pet .snibble-pupil {
+    transform-origin: center;
+    animation: snibble-blink 5s infinite;
+  }
+}
+
+@keyframes snibble-idle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes snibble-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96%           { transform: scaleY(0.1); }
 }
