@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase.js'
 import PetPreview from './components/PetPreview.jsx'
+import GameView from './components/GameView.jsx'
+import { preloadDictionary } from './lib/dictionary.js'
 
 // SQ hub URL — unauthed visitors get bounced here so the hub handles login.
 // Includes a `return` query param so they come back to /snibble/ after.
@@ -18,6 +20,10 @@ export default function App() {
 
   useEffect(() => {
     let active = true
+
+    // Kick off dictionary preload immediately so the puzzle generator
+    // doesn't pay the load cost when the user lands on the game.
+    preloadDictionary()
 
     // Read initial session.
     supabase.auth.getSession().then(({ data }) => {
@@ -55,7 +61,8 @@ export default function App() {
   // anyway during build mode.
   if (queryParam('view') === 'pets') return <PetPreview />
 
-  return <PlaceholderShell user={session.user} />
+  // The actual game.
+  return <GameView user={session.user} />
 }
 
 /**

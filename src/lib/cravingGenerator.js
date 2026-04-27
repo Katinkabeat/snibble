@@ -33,7 +33,7 @@ import {
   combineRules,
   weightedPick,
 } from './rules.js'
-import { getDictionary } from './dictionary.js'
+import { getDictionary, isValidWord } from './dictionary.js'
 
 const MIN_PHASE1_SOLUTIONS = 8
 const MIN_PHASE2_SOLUTIONS = 4
@@ -238,7 +238,6 @@ export async function generateTodaysPuzzle(date = new Date()) {
  */
 export async function validateFeed(word, phaseRules) {
   const w = (word || '').toUpperCase().trim()
-  const { isValidWord } = await import('./dictionary.js')
   if (!(await isValidWord(w))) return { ok: false, reason: 'not-a-word' }
   const rule = combineRules(phaseRules)
   if (!rule.matches(w)) return { ok: false, reason: 'wrong-rule' }
