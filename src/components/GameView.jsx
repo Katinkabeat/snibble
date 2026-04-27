@@ -147,7 +147,15 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed }) {
       <div className="max-w-md mx-auto">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-2">
-          <a href="/games/" className="text-xs text-wordy-700 hover:underline">← Side Quest</a>
+          <button
+            onClick={() => {
+              window.history.pushState({}, '', window.location.pathname)
+              window.dispatchEvent(new PopStateEvent('popstate'))
+            }}
+            className="text-xs text-wordy-700 hover:underline"
+          >
+            ← Lobby
+          </button>
           <span className="font-display text-sm text-wordy-800">{petInfo.name} · {growthLabel(petInfo)}</span>
           <span /> {/* spacer */}
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase.js'
 import PetPreview from './components/PetPreview.jsx'
+import LobbyView from './components/LobbyView.jsx'
 import GameView from './components/GameView.jsx'
 import { preloadDictionary } from './lib/dictionary.js'
 
@@ -17,6 +18,14 @@ function queryParam(name) {
 export default function App() {
   const [session, setSession] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [, setRouteTick] = useState(0)
+
+  // Re-render when the URL changes (back/forward, our own pushState).
+  useEffect(() => {
+    const onChange = () => setRouteTick((t) => t + 1)
+    window.addEventListener('popstate', onChange)
+    return () => window.removeEventListener('popstate', onChange)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -61,8 +70,17 @@ export default function App() {
   // anyway during build mode.
   if (queryParam('view') === 'pets') return <PetPreview />
 
-  // The actual game.
-  return <GameView user={session.user} />
+  // ?play=daily → daily play loop. Anything else (default) → lobby.
+  if (queryParam('play') === 'daily') return <GameView user={session.user} />
+  return <LobbyView user={session.user} onPlayDaily={() => goTo('?play=daily')} />
+}
+
+/** Navigate within /snibble/ by replacing the query string. */
+function goTo(searchSuffix) {
+  const newUrl = `${window.location.pathname}${searchSuffix}${window.location.hash}`
+  window.history.pushState({}, '', newUrl)
+  // Trigger a re-render — React doesn't watch location.search.
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
 /**
