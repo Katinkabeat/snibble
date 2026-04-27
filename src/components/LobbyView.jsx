@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
 import { useActivePet } from '../hooks/useActivePet.js'
+import SnibbleHeader from './SnibbleHeader.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
@@ -35,21 +36,7 @@ export default function LobbyView({ user, onPlayDaily }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100">
-      {/* Sticky header */}
-      <header className="bg-white border-b border-wordy-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-2xl text-wordy-700">Snibble</span>
-            <span className="text-xl leading-none">🌿</span>
-          </div>
-          <a
-            href="/games/"
-            className="text-sm text-wordy-700 hover:text-wordy-900 transition-colors"
-          >
-            ← Side Quest
-          </a>
-        </div>
-      </header>
+      <SnibbleHeader user={user} />
 
       {/* Body */}
       <main className="max-w-[480px] mx-auto px-4 py-6 space-y-5">
@@ -153,10 +140,6 @@ export default function LobbyView({ user, onPlayDaily }) {
           </div>
         </section>
 
-        {/* Footer hint */}
-        <p className="text-center text-[11px] italic text-wordy-600 pt-2">
-          Cozy daily word pet · part of <a href="/games/" className="underline">Side Quest</a>
-        </p>
       </main>
     </div>
   )

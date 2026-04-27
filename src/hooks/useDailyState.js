@@ -128,7 +128,25 @@ export function useDailyState({ userId, petId }) {
     }
   }
 
-  return { state, recordFeed, onFirstFeed }
+  /** Manually wrap up the session (player taps "Done for today"). */
+  async function markComplete() {
+    if (!userId || !petId) return
+    if (state.isComplete) return
+    if (state.wordsFed.length === 0) {
+      // Nothing to wrap up yet — don't persist an empty completed row.
+      return
+    }
+    const date = atlanticToday()
+    setState((prev) => ({ ...prev, isComplete: true }))
+    const { error } = await supabase
+      .from('sn_daily_feeds')
+      .update({ is_complete: true })
+      .eq('user_id', userId)
+      .eq('feed_date', date)
+    if (error) console.error('[useDailyState] markComplete error', error)
+  }
+
+  return { state, recordFeed, onFirstFeed, markComplete }
 }
 
 /** How many of the 3 phases have ≥3 feeds credited to them? */
