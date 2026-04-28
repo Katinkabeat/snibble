@@ -5,8 +5,8 @@
 @layer base {
   html, body {
     font-family: 'Nunito', sans-serif;
-    /* Match the Wordy + SQ hub palette exactly so all three games
-       feel like one app. */
+    /* Light-mode page bg matches the SQ + Wordy palette. The dark-mode
+       override below replaces it with a flat dark purple. */
     background: linear-gradient(135deg, #faf5ff 0%, #fce7f3 50%, #f3e8ff 100%);
     min-height: 100vh;
   }
@@ -20,8 +20,7 @@
     font-family: 'Fredoka One', cursive;
   }
 
-  /* Settings cog dropdown — matches Wordy's SettingsModal layout.
-     Each row is a label + action button on opposite ends. */
+  /* Settings cog dropdown — matches Wordy's SettingsModal layout. */
   .settings-dropdown {
     @apply absolute right-0 top-full mt-2 w-64 z-50 p-1 shadow-lg;
     animation: snibble-dropdown-in 0.12s ease-out;
@@ -33,22 +32,16 @@
     @apply border-t border-wordy-100;
   }
 
-  /* Pet idle bounce — applied to the SVG. */
+  /* Pet idle bounce + chomp + blink. */
   .snibble-pet {
     animation: snibble-idle 3s ease-in-out infinite;
     transform-origin: 50% 95%;
   }
-  /* Blink — scales the entire eye group around its own centre.
-     transform-box: fill-box so transform-origin resolves against
-     the eye, not the whole SVG canvas. */
   .snibble-pet .snibble-eye {
     transform-box: fill-box;
     transform-origin: center;
     animation: snibble-blink 5s infinite;
   }
-
-  /* Chomp reaction — fires for ~600ms when the pet eats a word.
-     Brief squish + happy hop overrides the idle bounce. */
   .snibble-chomp {
     animation: snibble-chomp 0.6s ease-out;
   }
@@ -75,4 +68,107 @@
 @keyframes snibble-dropdown-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   DARK MODE
+   Mirrors Wordy's index.css dark rules so all three SQ apps
+   (Wordy, Rungles, Snibble) share the same dark palette. The
+   `!important` overrides intentionally win over Tailwind's
+   utility classes; this is what the SQ conventions call out
+   as the standard pattern.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Base ── */
+.dark body {
+  background-color: #0f0a1e;
+  color: #ede0ff;
+}
+
+/* ── Page gradients → solid dark background ── */
+.dark .from-wordy-50   { --tw-gradient-from: #0f0a1e; }
+.dark .from-wordy-100  { --tw-gradient-from: #0f0a1e; }
+.dark .from-wordy-200  { --tw-gradient-from: #1a1130; }
+.dark .from-wordy-400  { --tw-gradient-from: #6d28d9; }
+.dark .via-pink-50     { --tw-gradient-via:  #130c25; }
+.dark .via-pink-100    {
+  --tw-gradient-via: #130c25;
+  --tw-gradient-stops: var(--tw-gradient-from), #130c25 var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
+}
+.dark .to-wordy-100    { --tw-gradient-to:   #0f0a1e; }
+.dark .to-wordy-200    { --tw-gradient-to:   #130c25; }
+.dark .to-wordy-400    { --tw-gradient-to:   #6d28d9; }
+.dark .to-wordy-600    { --tw-gradient-to:   #4c1d95; }
+.dark .to-pink-50      { --tw-gradient-to:   #130c25; }
+.dark .from-pink-50    { --tw-gradient-from: #130c25; }
+.dark .from-pink-100   { --tw-gradient-from: #2d1b55; }
+
+/* Snibble-specific gradients — pet habitat (pink→wordy) and
+   craving banner (amber on light → deep copper on dark). */
+.dark .from-amber-200  { --tw-gradient-from: #4a3010; }
+.dark .to-amber-400    { --tw-gradient-to:   #78350f; }
+.dark .from-yellow-200 { --tw-gradient-from: #4a3a0c; }
+.dark .to-yellow-400   { --tw-gradient-to:   #78550f; }
+.dark .from-indigo-400 { --tw-gradient-from: #4338ca; }
+.dark .to-indigo-600   { --tw-gradient-to:   #312e81; }
+.dark .from-pink-300   { --tw-gradient-from: #831843; }
+
+/* ── Tailwind colour overrides ── */
+.dark .bg-white           { background-color: #1a1130 !important; }
+.dark .bg-white\/60       { background-color: rgba(26, 17, 48, 0.6) !important; }
+.dark .bg-white\/70       { background-color: rgba(26, 17, 48, 0.7) !important; }
+.dark .bg-white\/80       { background-color: rgba(26, 17, 48, 0.8) !important; }
+/* Dropdown surfaces sit a step lighter than cards so they read as
+   floating above the page surface, not blending into it. */
+.dark .settings-dropdown.card,
+.dark .dropdown-surface {
+  background-color: #241640 !important;
+  border-color: #6d28d9 !important;
+}
+.dark .bg-wordy-50        { background-color: #1a1130 !important; }
+.dark .bg-wordy-100       { background-color: #221540 !important; }
+.dark .bg-wordy-200       { background-color: #2d1b55 !important; }
+.dark .bg-purple-50       { background-color: #1a1130 !important; }
+.dark .bg-purple-100      { background-color: #221540 !important; }
+
+.dark .border-wordy-100   { border-color: #2d1b55 !important; }
+.dark .border-wordy-200   { border-color: #3d2070 !important; }
+.dark .border-wordy-300   { border-color: #4c2a8a !important; }
+.dark .border-wordy-400   { border-color: #6d28d9 !important; }
+.dark .border-wordy-500   { border-color: #7c3aed !important; }
+.dark .border-wordy-600   { border-color: #7c3aed !important; }
+.dark .border-wordy-700   { border-color: #6d28d9 !important; }
+.dark .border-purple-100  { border-color: #2d1b55 !important; }
+.dark .border-yellow-600  { border-color: #92400e !important; }
+.dark .border-amber-500   { border-color: #b45309 !important; }
+.dark .border-amber-700   { border-color: #b45309 !important; }
+.dark .border-indigo-500  { border-color: #4338ca !important; }
+
+/* Progress bar fill colour */
+.dark .to-wordy-500       { --tw-gradient-to:   #7c3aed; }
+
+.dark .text-wordy-800     { color: #ddd6fe !important; }
+.dark .text-wordy-700     { color: #c4b5fd !important; }
+.dark .text-wordy-600     { color: #a78bfa !important; }
+.dark .text-wordy-500     { color: #8b5cf6 !important; }
+.dark .text-wordy-400     { color: #7c6a9a !important; }
+.dark .text-wordy-300     { color: #5b4a72 !important; }
+.dark .text-wordy-900     { color: #ede0ff !important; }
+.dark .text-pink-500      { color: #f472b6 !important; }
+.dark .text-purple-700    { color: #c4b5fd !important; }
+.dark .text-amber-900     { color: #fbbf24 !important; }
+.dark .text-amber-700     { color: #f59e0b !important; }
+.dark .text-yellow-900    { color: #fde68a !important; }
+
+/* ── Card / panel ── */
+.dark .card {
+  background-color: #1a1130;
+  border-color: #2d1b55;
+  color: #ede0ff;
+}
+
+/* Page bg with the existing light-mode body gradient — replace it
+   with a flat dark when .dark is on. */
+.dark html, .dark body {
+  background: #0f0a1e !important;
 }

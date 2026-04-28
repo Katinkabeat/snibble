@@ -13,9 +13,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 import toast from 'react-hot-toast'
 
 export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
+  const { isDark, toggle: toggleTheme } = useTheme()
   const ref = useRef(null)
   const [redoEnabled, setRedoEnabled] = useState(false)
   const [redoLoading, setRedoLoading] = useState(true)
@@ -117,15 +119,14 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
 
   return (
     <div ref={ref} className="settings-dropdown card">
-      {/* Theme — placeholder until full dark mode lands. */}
+      {/* Theme — light / dark toggle, persisted in localStorage. */}
       <div className="settings-row">
         <span className="text-sm font-bold text-wordy-600">Theme</span>
         <button
-          onClick={() => toast('Dark mode lands in the next polish pass.')}
-          className="text-sm font-bold text-wordy-400 cursor-not-allowed"
-          title="Coming soon"
+          onClick={toggleTheme}
+          className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
         >
-          🌙 Dark <span className="text-[10px]">soon</span>
+          {isDark ? '☀️ Light' : '🌙 Dark'}
         </button>
       </div>
 

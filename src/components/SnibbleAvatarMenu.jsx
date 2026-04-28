@@ -53,8 +53,8 @@ export default function SnibbleAvatarMenu({ profile }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-60 bg-[#fff] border border-[#e9d5ff] rounded-xl shadow-lg z-50 py-1">
-          <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-[#e9d5ff]">
+        <div className="absolute left-0 top-full mt-2 w-60 bg-[#fff] dark:bg-[#241640] border border-[#e9d5ff] dark:border-[#6d28d9] rounded-xl shadow-lg z-50 py-1">
+          <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-[#e9d5ff] dark:border-[#6d28d9]">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs"
               style={{ background: `hsl(${hue}, 70%, 55%)` }}
@@ -72,7 +72,7 @@ export default function SnibbleAvatarMenu({ profile }) {
               setOpen(false)
               toast('Snibble stats coming in v2 — leaderboards land with matches.')
             }}
-            className="w-full text-left px-3 py-2.5 text-sm hover:bg-wordy-50 text-wordy-700 transition-colors"
+            className="w-full text-left px-3 py-2.5 text-sm hover:bg-wordy-50 dark:hover:bg-[#2d1b55] text-wordy-700 transition-colors"
           >
             📊 Stats
             <span className="ml-1 text-[10px] text-wordy-400">soon</span>
