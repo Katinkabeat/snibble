@@ -1,24 +1,17 @@
 // ────────────────────────────────────────────────────────────
 //  useDailyState — manages the user's session for today.
 //
-//  Reads the existing sn_daily_feeds row for today (Atlantic time)
-//  if any, or sets up an in-memory state object to start fresh.
-//  Persists each successful feed back to the row.
-//
-//  Phase progression: phases are nested (phase 3 implies phase 2
-//  implies phase 1), so a fed word counts toward the highest phase
-//  it satisfies. We track per-phase fed counts; phase N is "done"
-//  once 3 words have credited it.
+//  v2 (phaseless): tracks words fed, score, and is_complete only.
+//  No per-phase counters. The progress bar in the UI uses the
+//  ratio of wordsFed.length to puzzle.totalSolutions.
 //
 //  First successful feed of the day triggers a +1 growth tick on
-//  the pet (the rule is "any day with at least 1 valid word counts
-//  as a successful session toward growth").
+//  the pet (any day with ≥1 valid word counts as a session).
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-/** YYYY-MM-DD in Atlantic time — same notion of "today" as the seed. */
 function atlanticToday() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Halifax',
@@ -30,12 +23,12 @@ function atlanticToday() {
 
 export function useDailyState({ userId, petId }) {
   const [state, setState] = useState({
-    wordsFed: [],          // [{ word, score, phase }]
+    wordsFed: [],          // [{ word, score }]
     score: 0,
-    isComplete: false,     // true once all 3 phases have 3+ feeds each
+    isComplete: false,
     loaded: false,
   })
-  const onGrowthRef = useRef(null) // optional callback when first feed triggers growth tick
+  const onGrowthRef = useRef(null)
 
   useEffect(() => {
     if (!userId || !petId) return
@@ -45,23 +38,16 @@ export function useDailyState({ userId, petId }) {
     async function load() {
       const { data, error } = await supabase
         .from('sn_daily_feeds')
-        .select('words_fed, score, phases_done, is_complete')
+        .select('words_fed, score, is_complete')
         .eq('user_id', userId)
         .eq('feed_date', date)
         .maybeSingle()
       if (error) console.warn('[useDailyState] load error', error)
       if (!active) return
 
-      // The sn_daily_feeds.words_fed is a string[] — we need to recover
-      // per-word phase info. For now we don't persist phase breakdown,
-      // so on reload we recompute counts purely from the string list
-      // by re-running the rule against each word. To avoid a circular
-      // dep with the puzzle, we leave words[].phase undefined on load
-      // and only use the totals — the GameView re-derives phase counts
-      // when it has access to the puzzle.
       if (data) {
         setState({
-          wordsFed: (data.words_fed || []).map((w) => ({ word: w, score: 0, phase: null })),
+          wordsFed: (data.words_fed || []).map((w) => ({ word: w, score: 0 })),
           score: data.score || 0,
           isComplete: !!data.is_complete,
           loaded: true,
@@ -71,32 +57,26 @@ export function useDailyState({ userId, petId }) {
       }
     }
     load()
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [userId, petId])
 
-  /** Register a callback to fire on the FIRST feed of the day. */
   function onFirstFeed(cb) {
     onGrowthRef.current = cb
   }
 
   /**
-   * Persist a successful feed. Called by GameView after the generator
-   * has confirmed the word matches the active phase rule.
-   *   word         — uppercase string, validated as a real word + matches rule
-   *   wordScore    — Scrabble letter sum
-   *   matchedPhase — 1, 2, or 3 — the highest phase this word satisfies
-   *   willComplete — true if this feed completes all 3 phases
+   * Persist a successful feed.
+   *   word          — uppercase word, already validated
+   *   wordScore     — Scrabble values + length bonus
+   *   willComplete  — true if this feed reaches 100% of total solutions
    */
-  async function recordFeed({ word, wordScore, matchedPhase, willComplete }) {
+  async function recordFeed({ word, wordScore, willComplete }) {
     if (!userId || !petId) return
     const date = atlanticToday()
     const wasFirstFeed = state.wordsFed.length === 0
 
-    const newWordsFed = [...state.wordsFed, { word, score: wordScore, phase: matchedPhase }]
+    const newWordsFed = [...state.wordsFed, { word, score: wordScore }]
     const newScore = state.score + wordScore
-    const newPhasesDone = countCompletedPhases(newWordsFed)
     const isComplete = !!willComplete
 
     setState({
@@ -106,7 +86,6 @@ export function useDailyState({ userId, petId }) {
       loaded: true,
     })
 
-    // Upsert (insert if missing, update otherwise).
     const { error } = await supabase
       .from('sn_daily_feeds')
       .upsert(
@@ -116,8 +95,10 @@ export function useDailyState({ userId, petId }) {
           pet_id: petId,
           words_fed: newWordsFed.map((w) => w.word),
           score: newScore,
-          phases_done: newPhasesDone,
           is_complete: isComplete,
+          // phases_done is vestigial post-v2; persist 0 so older
+          // rows reading the column still get a valid integer.
+          phases_done: 0,
         },
         { onConflict: 'user_id,feed_date' }
       )
@@ -132,10 +113,7 @@ export function useDailyState({ userId, petId }) {
   async function markComplete() {
     if (!userId || !petId) return
     if (state.isComplete) return
-    if (state.wordsFed.length === 0) {
-      // Nothing to wrap up yet — don't persist an empty completed row.
-      return
-    }
+    if (state.wordsFed.length === 0) return
     const date = atlanticToday()
     setState((prev) => ({ ...prev, isComplete: true }))
     const { error } = await supabase
@@ -147,13 +125,4 @@ export function useDailyState({ userId, petId }) {
   }
 
   return { state, recordFeed, onFirstFeed, markComplete }
-}
-
-/** How many of the 3 phases have ≥3 feeds credited to them? */
-function countCompletedPhases(wordsFed) {
-  const perPhase = [0, 0, 0] // index 0 = phase 1, etc.
-  for (const w of wordsFed) {
-    if (w.phase >= 1 && w.phase <= 3) perPhase[w.phase - 1]++
-  }
-  return perPhase.filter((c) => c >= 3).length
 }

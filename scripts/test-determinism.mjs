@@ -12,6 +12,8 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '..')
 const wordsText = await fs.readFile(path.join(repoRoot, 'public/words.txt'), 'utf-8')
 globalThis.__SNIBBLE_DICTIONARY__ = wordsText.split('\n').map((w) => w.trim()).filter(Boolean)
+const commonText = await fs.readFile(path.join(repoRoot, 'public/common-words.txt'), 'utf-8')
+globalThis.__SNIBBLE_COMMON_WORDS__ = commonText.split('\n').map((w) => w.trim()).filter(Boolean)
 
 const { generatePuzzle } = await import('../src/lib/cravingGenerator.js')
 
@@ -32,8 +34,9 @@ for (const seed of seeds) {
   const matches =
     a.base.id === b.base.id &&
     a.letters.join('') === b.letters.join('') &&
-    a.phases[2].label === b.phases[2].label &&
-    a.sampleSolutions.phase1.join(',') === b.sampleSolutions.phase1.join(',')
+    a.totalSolutions === b.totalSolutions &&
+    a.parCount === b.parCount &&
+    a.sampleSolutions.join(',') === b.sampleSolutions.join(',')
 
   console.log(
     `${matches ? '✓' : '✗'} ${seed}  →  base=${a.base.id}  tray=${a.letters.join('')}`

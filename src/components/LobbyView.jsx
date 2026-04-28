@@ -86,7 +86,18 @@ export default function LobbyView({ user, onPlayDaily }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <p className="font-display text-lg text-wordy-800">Daily craving</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-display text-lg text-wordy-800">Daily craving</p>
+                  {puzzleTeaser && (
+                    <span
+                      className="text-xs"
+                      title={`${puzzleTeaser.difficulty === 1 ? 'easy' : puzzleTeaser.difficulty === 2 ? 'medium' : 'hard'} day`}
+                    >
+                      <span className="text-amber-600">{'★'.repeat(puzzleTeaser.difficulty)}</span>
+                      <span className="text-amber-200">{'★'.repeat(3 - puzzleTeaser.difficulty)}</span>
+                    </span>
+                  )}
+                </div>
                 {puzzleTeaser ? (
                   <p className="text-sm text-wordy-600 mt-1">
                     {petInfo?.name ?? 'Your pet'} wants{' '}
@@ -96,7 +107,7 @@ export default function LobbyView({ user, onPlayDaily }) {
                   <p className="text-sm text-wordy-500 italic mt-1">Loading today's puzzle…</p>
                 )}
                 <p className="text-[11px] text-wordy-500 mt-2 italic">
-                  3 phases · same puzzle for everyone today
+                  Same puzzle for everyone today
                 </p>
               </div>
               <div className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-br from-wordy-400 to-wordy-600 text-white text-sm font-display shadow-tile">

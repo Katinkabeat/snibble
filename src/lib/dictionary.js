@@ -1,23 +1,22 @@
 // ────────────────────────────────────────────────────────────
-//  Word dictionary — TWL Scrabble list (173,144 words).
-//  Same source as Wordy's `words.txt`. Copied into Snibble's
-//  /public so the bundle stays self-contained.
+//  Word dictionaries — TWL Scrabble list (173,144 words) for
+//  validation, plus a "common words" list (top ~5000 most-frequent
+//  English words intersected with TWL → 4355 words) used to
+//  compute the daily par line.
 // ────────────────────────────────────────────────────────────
 
 let wordSet = null
 let wordList = null
 let loadPromise = null
+let commonSet = null
+let commonLoadPromise = null
 
-// Tests/scripts running in Node can pre-populate the dictionary by
-// setting `globalThis.__SNIBBLE_DICTIONARY__` to an array of words
-// before importing this module. In the browser, we fetch words.txt.
-function dictionaryUrl() {
-  // import.meta.env exists in Vite; fall back to '/' for non-Vite contexts.
+function urlFor(filename) {
   try {
     const base = import.meta.env?.BASE_URL ?? '/'
-    return `${base}words.txt`
+    return `${base}${filename}`
   } catch {
-    return '/words.txt'
+    return `/${filename}`
   }
 }
 
@@ -25,14 +24,13 @@ async function loadWordList() {
   if (wordSet) return { wordSet, wordList }
   if (loadPromise) return loadPromise
 
-  // Test/script override: pre-loaded words array on globalThis.
   if (typeof globalThis !== 'undefined' && globalThis.__SNIBBLE_DICTIONARY__) {
     wordList = globalThis.__SNIBBLE_DICTIONARY__
     wordSet = new Set(wordList)
     return { wordSet, wordList }
   }
 
-  loadPromise = fetch(dictionaryUrl())
+  loadPromise = fetch(urlFor('words.txt'))
     .then((res) => {
       if (!res.ok) throw new Error(`Failed to load word list: ${res.status}`)
       return res.text()
@@ -46,7 +44,29 @@ async function loadWordList() {
   return loadPromise
 }
 
-/** Returns true if word is a valid TWL word. Case-insensitive. */
+async function loadCommonWords() {
+  if (commonSet) return commonSet
+  if (commonLoadPromise) return commonLoadPromise
+
+  if (typeof globalThis !== 'undefined' && globalThis.__SNIBBLE_COMMON_WORDS__) {
+    commonSet = new Set(globalThis.__SNIBBLE_COMMON_WORDS__)
+    return commonSet
+  }
+
+  commonLoadPromise = fetch(urlFor('common-words.txt'))
+    .then((res) => {
+      if (!res.ok) throw new Error(`Failed to load common-words list: ${res.status}`)
+      return res.text()
+    })
+    .then((text) => {
+      const list = text.split('\n').map((w) => w.trim()).filter(Boolean)
+      commonSet = new Set(list)
+      return commonSet
+    })
+
+  return commonLoadPromise
+}
+
 export async function isValidWord(word) {
   const w = (word || '').toUpperCase().trim()
   if (!w) return false
@@ -55,13 +75,15 @@ export async function isValidWord(word) {
   return wordSet.has(w)
 }
 
-/** Returns the underlying dictionary array (for the craving generator's solvability check). */
 export async function getDictionary() {
   const { wordList } = await loadWordList()
   return wordList
 }
 
-/** Eager load — call early so the first puzzle doesn't pay the load cost. */
+export async function getCommonWordSet() {
+  return loadCommonWords()
+}
+
 export function preloadDictionary() {
-  return loadWordList()
+  return Promise.all([loadWordList(), loadCommonWords()])
 }
