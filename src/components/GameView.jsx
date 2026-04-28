@@ -242,7 +242,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                   key={i}
                   onClick={() => setBuilt(built.filter((_, j) => j !== i))}
                   title="Tap to remove this letter"
-                  className="tile tile-placed font-display text-lg w-9 h-10 text-wordy-900"
+                  className="tile tile-placed font-display text-lg w-9 h-10"
                 >
                   {letter}
                 </button>
@@ -282,7 +282,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                 <button
                   key={i}
                   onClick={() => setBuilt((b) => [...b, letter])}
-                  className="tile font-display text-lg h-11 text-wordy-900"
+                  className="tile font-display text-lg h-11"
                 >
                   {letter}
                 </button>

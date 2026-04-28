@@ -3,11 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  /* Body matches Wordy exactly so default text colour inherits the
+     same deep purple. Wrapper divs carry the page gradient via
+     `bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100` —
+     keeping the gradient OFF body is what lets the dark-mode body
+     override go solid without fighting an inherited background-image. */
+  body {
     font-family: 'Nunito', sans-serif;
-    /* Light-mode page bg matches the SQ + Wordy palette. The dark-mode
-       override below replaces it with a flat dark purple. */
-    background: linear-gradient(135deg, #faf5ff 0%, #fce7f3 50%, #f3e8ff 100%);
+    background-color: #faf5ff;
+    color: #3b0764;
     min-height: 100vh;
   }
 }
