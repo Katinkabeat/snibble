@@ -103,14 +103,34 @@
 .dark .from-pink-50    { --tw-gradient-from: #130c25; }
 .dark .from-pink-100   { --tw-gradient-from: #2d1b55; }
 
-/* Snibble-specific gradients — pet habitat (pink→wordy) and
-   craving banner (amber on light → deep copper on dark). */
-.dark .from-amber-200  { --tw-gradient-from: #4a3010; }
-.dark .to-amber-400    { --tw-gradient-to:   #78350f; }
-.dark .from-yellow-200 { --tw-gradient-from: #4a3a0c; }
-.dark .to-yellow-400   { --tw-gradient-to:   #78550f; }
-.dark .from-indigo-400 { --tw-gradient-from: #4338ca; }
-.dark .to-indigo-600   { --tw-gradient-to:   #312e81; }
+/* Snibble-specific gradients in dark mode use the wordy purple
+   palette — NOT muted versions of their light-mode hues — so
+   Snibble's dark mode reads as part of the Wordy / SQ family
+   instead of having unique amber/yellow/indigo accents. Light
+   mode keeps its cozy character; dark mode aligns with Wordy.
+   Per the SQ conventions: any element a game has that Wordy
+   doesn't should use wordy-palette dark values. */
+
+/* Craving banner (amber-200 → amber-400 in light) — dark uses a
+   prominent mid-purple band so it still reads as "today's
+   featured rule" but in Wordy's vocabulary. */
+.dark .from-amber-200  { --tw-gradient-from: #2d1b55; }
+.dark .to-amber-400    { --tw-gradient-to:   #6d28d9; }
+
+/* Word-builder tiles (yellow-200 → yellow-400 in light) — dark
+   uses a brighter purple than the letter-tray tiles so the
+   "letters you've assembled" still pop visually. */
+.dark .from-yellow-200 { --tw-gradient-from: #4c1d95; }
+.dark .to-yellow-400   { --tw-gradient-to:   #7c3aed; }
+
+/* Done-for-today (indigo-400 → indigo-600 in light) — dark uses
+   the deepest wordy purples so it reads as "calmer / wrap up"
+   next to the brighter Feed button. */
+.dark .from-indigo-400 { --tw-gradient-from: #4c1d95; }
+.dark .to-indigo-600   { --tw-gradient-to:   #2d1b55; }
+
+/* Progress-bar fill — keep some pink so the bar actually shows
+   under dark surroundings. */
 .dark .from-pink-300   { --tw-gradient-from: #831843; }
 
 /* ── Tailwind colour overrides ── */
@@ -139,10 +159,12 @@
 .dark .border-wordy-600   { border-color: #7c3aed !important; }
 .dark .border-wordy-700   { border-color: #6d28d9 !important; }
 .dark .border-purple-100  { border-color: #2d1b55 !important; }
-.dark .border-yellow-600  { border-color: #92400e !important; }
-.dark .border-amber-500   { border-color: #b45309 !important; }
-.dark .border-amber-700   { border-color: #b45309 !important; }
-.dark .border-indigo-500  { border-color: #4338ca !important; }
+/* Snibble's amber/yellow/indigo borders → wordy purple in dark
+   so the elements they outline match the new dark-mode gradients. */
+.dark .border-yellow-600  { border-color: #7c3aed !important; }
+.dark .border-amber-500   { border-color: #6d28d9 !important; }
+.dark .border-amber-700   { border-color: #6d28d9 !important; }
+.dark .border-indigo-500  { border-color: #4c1d95 !important; }
 
 /* Progress bar fill colour */
 .dark .to-wordy-500       { --tw-gradient-to:   #7c3aed; }
@@ -156,9 +178,12 @@
 .dark .text-wordy-900     { color: #ede0ff !important; }
 .dark .text-pink-500      { color: #f472b6 !important; }
 .dark .text-purple-700    { color: #c4b5fd !important; }
-.dark .text-amber-900     { color: #fbbf24 !important; }
-.dark .text-amber-700     { color: #f59e0b !important; }
-.dark .text-yellow-900    { color: #fde68a !important; }
+/* Snibble's amber/yellow text → wordy-light in dark so the cozy
+   light-mode accent text becomes purple-light in dark for
+   palette consistency with Wordy. */
+.dark .text-amber-900     { color: #ddd6fe !important; }
+.dark .text-amber-700     { color: #c4b5fd !important; }
+.dark .text-yellow-900    { color: #ddd6fe !important; }
 
 /* ── Card / panel ── */
 .dark .card {
