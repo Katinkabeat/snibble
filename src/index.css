@@ -13,11 +13,46 @@
 }
 
 @layer components {
+  /* Mirror Wordy's `.card` exactly so all SQ apps share the same
+     panel treatment. (Keep p-4 default off — Snibble panels set
+     their own padding.) */
   .card {
-    @apply bg-white rounded-2xl border border-wordy-100 shadow-sm;
+    @apply bg-white rounded-2xl shadow-md border border-purple-100;
   }
   .font-display {
     font-family: 'Fredoka One', cursive;
+  }
+
+  /* Wordy's primary button — lift verbatim. */
+  .btn-primary {
+    @apply px-4 py-2 rounded-xl font-bold text-white transition-all duration-150 active:scale-95;
+    background: linear-gradient(135deg, #9333ea, #7e22ce);
+    box-shadow: 0 3px 0 #581c87;
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-primary:active { box-shadow: none; transform: translateY(2px); }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-xl font-bold border-2 border-purple-400 text-purple-700 bg-white transition-all duration-150 active:scale-95;
+  }
+  .btn-secondary:hover { @apply bg-purple-50; }
+
+  /* Wordy's tile — used for the letter tray. Light gradient on a
+     soft purple border + signature offset shadow. */
+  .tile {
+    @apply flex items-center justify-center rounded-lg font-bold select-none cursor-pointer transition-all duration-100;
+    background: linear-gradient(145deg, #f3e8ff, #e9d5ff);
+    border: 1.5px solid #c084fc;
+    box-shadow: 2px 3px 0px rgba(88, 28, 135, 0.4);
+  }
+  .tile:hover {
+    box-shadow: 3px 4px 0px rgba(88, 28, 135, 0.5);
+    transform: translateY(-1px);
+  }
+  /* Used for the word-builder tiles in Snibble (Wordy uses it for
+     placed-on-board tiles). Slightly deeper purple gradient than .tile. */
+  .tile-placed {
+    background: linear-gradient(145deg, #e9d5ff, #d8b4fe);
   }
 
   /* Settings cog dropdown — matches Wordy's SettingsModal layout. */
@@ -191,6 +226,28 @@
   border-color: #2d1b55;
   color: #ede0ff;
 }
+
+/* ── Tile (letter tray + builder) — mirror Wordy ── */
+.dark .tile {
+  background: linear-gradient(145deg, #2d1b55, #1e1040);
+  border-color: #7c3aed;
+  box-shadow: 2px 3px 0px rgba(124, 58, 237, 0.5);
+  color: #ede0ff;
+}
+.dark .tile:hover {
+  box-shadow: 3px 4px 0px rgba(124, 58, 237, 0.6);
+}
+.dark .tile-placed {
+  background: linear-gradient(145deg, #3b1a5e, #2d1b4e);
+}
+
+/* ── Buttons — mirror Wordy ── */
+.dark .btn-secondary {
+  background-color: #1a1130;
+  border-color: #6d28d9;
+  color: #c4b5fd;
+}
+.dark .btn-secondary:hover { background-color: #221540; }
 
 /* Page bg with the existing light-mode body gradient — replace it
    with a flat dark when .dark is on. */

@@ -228,7 +228,9 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             <p className="font-display text-lg mt-1 leading-tight">{puzzle.base.label}</p>
           </div>
 
-          {/* Word being built */}
+          {/* Word being built — uses Wordy's .tile-placed colors so
+              the assembled letters look like a "set on the board"
+              version of the regular tray tiles. */}
           <div className="bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2">
             {built.length === 0 ? (
               <span className="italic text-wordy-500 text-sm">
@@ -240,7 +242,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                   key={i}
                   onClick={() => setBuilt(built.filter((_, j) => j !== i))}
                   title="Tap to remove this letter"
-                  className="w-9 h-10 grid place-items-center bg-gradient-to-br from-yellow-200 to-yellow-400 text-yellow-900 font-display text-lg rounded-lg border border-yellow-600 shadow-tile"
+                  className="tile tile-placed font-display text-lg w-9 h-10 text-wordy-900"
                 >
                   {letter}
                 </button>
@@ -249,27 +251,28 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
           </div>
 
           {/* Feed + Clear, side-by-side. Both always visible so the
-              right edge of the screen is predictable. Clear is the
-              secondary action — same shape and weight as Feed but
-              a softer surface. */}
+              right edge of the screen is predictable. Snibble uses
+              Wordy's .btn-primary / .btn-secondary classes verbatim
+              so dark mode and hover behaviour match. */}
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               disabled={built.length < 3 || busy}
               onClick={handleFeed}
-              className="py-3 font-display text-lg rounded-2xl text-white bg-gradient-to-br from-wordy-400 to-wordy-600 shadow-tile disabled:opacity-50 transition-transform active:translate-y-0.5"
+              className="btn-primary py-3 font-display text-lg disabled:opacity-50"
             >
               Feed 🍃
             </button>
             <button
               disabled={built.length === 0 || busy}
               onClick={() => setBuilt([])}
-              className="py-3 font-display text-lg rounded-2xl text-wordy-700 bg-white border-2 border-wordy-300 shadow-tile disabled:opacity-50 transition-transform active:translate-y-0.5"
+              className="btn-secondary py-3 font-display text-lg disabled:opacity-50"
             >
               Clear
             </button>
           </div>
 
-          {/* Letter tray — fixed 7 columns × 2 rows for a tray of 14. */}
+          {/* Letter tray — fixed 7 columns × 2 rows for a tray of 14.
+              Each letter uses Wordy's .tile class so colors match. */}
           <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-3">
             <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2">
               TODAY'S LETTERS — TAP TO REUSE ANY
@@ -279,7 +282,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                 <button
                   key={i}
                   onClick={() => setBuilt((b) => [...b, letter])}
-                  className="h-11 grid place-items-center bg-gradient-to-br from-wordy-200 to-wordy-400 text-wordy-900 font-display text-lg rounded-lg border border-wordy-600 shadow-tile transition-transform active:translate-y-0.5"
+                  className="tile font-display text-lg h-11 text-wordy-900"
                 >
                   {letter}
                 </button>
@@ -287,12 +290,12 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             </div>
           </div>
 
-          {/* Done-for-today — same shape/weight as Feed but in a moonlit
-              indigo so it reads as the "wrap-up" action, not "submit". */}
+          {/* Done-for-today — uses .btn-primary so it matches Wordy's
+              button treatment. Position differentiates it from Feed. */}
           {fedCount > 0 && (
             <button
               onClick={handleDoneForToday}
-              className="w-full py-3 font-display text-lg rounded-2xl text-white bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-tile transition-transform active:translate-y-0.5"
+              className="btn-primary w-full py-3 font-display text-lg"
             >
               Done for today 🌙
             </button>

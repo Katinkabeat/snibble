@@ -110,7 +110,7 @@ export default function LobbyView({ user, onPlayDaily }) {
                   Same puzzle for everyone today
                 </p>
               </div>
-              <div className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-br from-wordy-400 to-wordy-600 text-white text-sm font-display shadow-tile">
+              <div className="btn-primary shrink-0 text-sm font-display">
                 Play →
               </div>
             </div>
