@@ -248,30 +248,38 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             )}
           </div>
 
-          <button
-            disabled={built.length < 3 || busy}
-            onClick={handleFeed}
-            className="w-full py-3 font-display text-lg rounded-2xl text-white bg-gradient-to-br from-wordy-400 to-wordy-600 shadow-tile disabled:opacity-50 transition-transform active:translate-y-0.5"
-          >
-            Feed 🍃
-          </button>
-          <div className="text-center mt-1 mb-3">
-            {built.length > 0 && (
-              <button onClick={() => setBuilt([])} className="text-xs text-wordy-700 underline">clear</button>
-            )}
+          {/* Feed + Clear, side-by-side. Both always visible so the
+              right edge of the screen is predictable. Clear is the
+              secondary action — same shape and weight as Feed but
+              a softer surface. */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              disabled={built.length < 3 || busy}
+              onClick={handleFeed}
+              className="py-3 font-display text-lg rounded-2xl text-white bg-gradient-to-br from-wordy-400 to-wordy-600 shadow-tile disabled:opacity-50 transition-transform active:translate-y-0.5"
+            >
+              Feed 🍃
+            </button>
+            <button
+              disabled={built.length === 0 || busy}
+              onClick={() => setBuilt([])}
+              className="py-3 font-display text-lg rounded-2xl text-wordy-700 bg-white border-2 border-wordy-300 shadow-tile disabled:opacity-50 transition-transform active:translate-y-0.5"
+            >
+              Clear
+            </button>
           </div>
 
-          {/* Letter tray */}
+          {/* Letter tray — fixed 7 columns × 2 rows for a tray of 14. */}
           <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-3">
             <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2">
               TODAY'S LETTERS — TAP TO REUSE ANY
             </p>
-            <div className="flex flex-wrap gap-1.5 justify-center">
+            <div className="grid grid-cols-7 gap-1.5">
               {puzzle.letters.map((letter, i) => (
                 <button
                   key={i}
                   onClick={() => setBuilt((b) => [...b, letter])}
-                  className="w-10 h-11 grid place-items-center bg-gradient-to-br from-wordy-200 to-wordy-400 text-wordy-900 font-display text-lg rounded-lg border border-wordy-600 shadow-tile transition-transform active:translate-y-0.5"
+                  className="h-11 grid place-items-center bg-gradient-to-br from-wordy-200 to-wordy-400 text-wordy-900 font-display text-lg rounded-lg border border-wordy-600 shadow-tile transition-transform active:translate-y-0.5"
                 >
                   {letter}
                 </button>
@@ -279,10 +287,12 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             </div>
           </div>
 
+          {/* Done-for-today — same shape/weight as Feed but in a moonlit
+              indigo so it reads as the "wrap-up" action, not "submit". */}
           {fedCount > 0 && (
             <button
               onClick={handleDoneForToday}
-              className="w-full py-2.5 text-sm text-wordy-700 bg-white/60 border border-wordy-200 rounded-2xl hover:bg-white transition-colors"
+              className="w-full py-3 font-display text-lg rounded-2xl text-white bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-tile transition-transform active:translate-y-0.5"
             >
               Done for today 🌙
             </button>

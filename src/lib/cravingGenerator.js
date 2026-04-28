@@ -38,7 +38,7 @@ import { getDictionary, getCommonWordSet, isValidWord } from './dictionary.js'
 
 const MIN_SOLUTIONS = 8
 const MAX_REGENERATIONS = 50
-const TARGET_TRAY_SIZE = 13
+const TARGET_TRAY_SIZE = 14
 
 // ───────── Letter pool & tray construction ─────────
 
@@ -117,9 +117,9 @@ export async function generatePuzzle(seedString) {
     commonSolutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
 
     const parCount = commonSolutions.length
-    // Difficulty thresholds tuned against 30-day previews so the
-    // distribution sits roughly 1/3 each. Tweak after play data.
-    const difficulty = parCount >= 15 ? 1 : parCount >= 6 ? 2 : 3
+    // Difficulty thresholds tuned against 30-day previews with the
+    // 8k common-words list. 1/3 distribution per tier on average.
+    const difficulty = parCount >= 40 ? 1 : parCount >= 12 ? 2 : 3
 
     return {
       seed: seedString,
