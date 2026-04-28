@@ -109,6 +109,31 @@ export function useDailyState({ userId, petId }) {
     }
   }
 
+  /**
+   * Wipe today's session — used by the "Redo today" admin-gated
+   * testing feature. Deletes the user's sn_daily_feeds row for
+   * today and resets local state to a fresh day.
+   *
+   * Note: this does NOT roll back the +1 growth tick that fired on
+   * first feed. Next first-feed will tick growth AGAIN. Acceptable
+   * for the testing phase — the feature is gated behind an admin
+   * toggle and meant for short-lived dev cycles, not production play.
+   */
+  async function resetToday() {
+    if (!userId) return
+    const date = atlanticToday()
+    const { error } = await supabase
+      .from('sn_daily_feeds')
+      .delete()
+      .eq('user_id', userId)
+      .eq('feed_date', date)
+    if (error) {
+      console.error('[useDailyState] resetToday error', error)
+      return
+    }
+    setState({ wordsFed: [], score: 0, isComplete: false, loaded: true })
+  }
+
   /** Manually wrap up the session (player taps "Done for today"). */
   async function markComplete() {
     if (!userId || !petId) return
@@ -124,5 +149,5 @@ export function useDailyState({ userId, petId }) {
     if (error) console.error('[useDailyState] markComplete error', error)
   }
 
-  return { state, recordFeed, onFirstFeed, markComplete }
+  return { state, recordFeed, onFirstFeed, markComplete, resetToday }
 }
