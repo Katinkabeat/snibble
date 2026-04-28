@@ -67,7 +67,7 @@ export default function GameView({ user }) {
 
 function ShellWithHeader({ user, children }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100">
+    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100 dark:bg-[#0f0a1e] dark:bg-none">
       <SnibbleHeader user={user} />
       <main className="max-w-[480px] mx-auto px-4 py-4 pb-12">{children}</main>
     </div>

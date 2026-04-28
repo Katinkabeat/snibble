@@ -35,7 +35,7 @@ export default function LobbyView({ user, onPlayDaily }) {
   const PetComponent = petInfo ? (PET_COMPONENTS[petInfo.petId] ?? Mossy) : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100">
+    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100 dark:bg-[#0f0a1e] dark:bg-none">
       <SnibbleHeader user={user} />
 
       {/* Body */}
