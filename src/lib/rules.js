@@ -62,7 +62,7 @@ const SUFFIXES = [
 const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3 }) => ({
   id: `suffix:${suffix}`,
   family: 'suffix',
-  label: `ends in -${suffix}`,
+  label: `end in -${suffix}`,
   matches: (w) => w.length >= minWordLen && w.endsWith(suffix),
   weight,
 }))
@@ -81,7 +81,7 @@ const CONTAINS = [
 const containsRules = CONTAINS.map(({ sub, weight }) => ({
   id: `contains:${sub}`,
   family: 'contains',
-  label: `contains -${sub}-`,
+  label: `contain -${sub}-`,
   matches: (w) => w.length >= 3 && w.includes(sub),
   weight,
 }))
@@ -98,7 +98,7 @@ const STARTS_WITH = [
 const startsRules = STARTS_WITH.map(({ prefix, weight }) => ({
   id: `starts:${prefix}`,
   family: 'starts',
-  label: `starts with ${prefix}-`,
+  label: `start with ${prefix}-`,
   matches: (w) => w.length >= 3 && w.startsWith(prefix),
   weight,
 }))
@@ -108,14 +108,14 @@ const specialRules = [
   {
     id: 'special:double-letter',
     family: 'special',
-    label: 'contains a double letter',
+    label: 'contain a double letter',
     matches: (w) => w.length >= 3 && hasDoubleLetter(w),
     weight: 3,
   },
   {
     id: 'special:vowel-rich',
     family: 'special',
-    label: 'has 3 or more vowels',
+    label: 'have 3 or more vowels',
     matches: (w) => w.length >= 4 && vowelCount(w) >= 3,
     weight: 2,
   },
@@ -166,7 +166,7 @@ export const PHASE3_BONUSES = [
   },
   {
     id: 'bonus:double-letter',
-    label: 'contains a double letter',
+    label: 'contain a double letter',
     matches: (w) => hasDoubleLetter(w),
     weight: 3,
   },
@@ -178,7 +178,7 @@ export const PHASE3_BONUSES = [
   },
   {
     id: 'bonus:vowel-rich',
-    label: 'has 3 or more vowels',
+    label: 'have 3 or more vowels',
     matches: (w) => vowelCount(w) >= 3,
     weight: 2,
   },

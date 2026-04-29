@@ -97,9 +97,57 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
   const [busy, setBusy] = useState(false)
   const [chomping, setChomping] = useState(false)
   const [confirmingDone, setConfirmingDone] = useState(false)
+  const [trayLetters, setTrayLetters] = useState(() => [...puzzle.letters])
+  const [selectedRackIdx, setSelectedRackIdx] = useState(null)
   const confirmTimerRef = useRef(null)
   const milestonesRef = useRef(new Set())
   const parToastShownRef = useRef(false)
+
+  function handleShuffle() {
+    const shuffled = [...trayLetters]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    setTrayLetters(shuffled)
+    setSelectedRackIdx(null)
+  }
+
+  function handleRackTap(idx) {
+    if (selectedRackIdx === null) {
+      setSelectedRackIdx(idx)
+      return
+    }
+    if (selectedRackIdx === idx) {
+      setSelectedRackIdx(null)
+      return
+    }
+    // Two rack tiles tapped → swap their positions on the rack
+    const next = [...trayLetters]
+    ;[next[selectedRackIdx], next[idx]] = [next[idx], next[selectedRackIdx]]
+    setTrayLetters(next)
+    setSelectedRackIdx(null)
+  }
+
+  function handleBuiltTap(idx) {
+    if (selectedRackIdx === null) {
+      // Nothing selected → remove this letter from the built word
+      setBuilt(built.filter((_, j) => j !== idx))
+      return
+    }
+    // Rack letter selected → insert it to the LEFT of this built tile
+    const letter = trayLetters[selectedRackIdx]
+    const next = [...built.slice(0, idx), letter, ...built.slice(idx)]
+    setBuilt(next)
+    setSelectedRackIdx(null)
+  }
+
+  function handleAppend() {
+    if (selectedRackIdx === null) return
+    const letter = trayLetters[selectedRackIdx]
+    setBuilt((b) => [...b, letter])
+    setSelectedRackIdx(null)
+  }
 
   const baseRule = useMemo(() => RULES_BY_ID[puzzle.base.id], [puzzle.base.id])
 
@@ -134,12 +182,12 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
     if (word.length < 3) return
     setBusy(true)
     try {
-      if (!(await isCommonWord(word))) {
-        toast.error(`"${word}" isn't a word`)
+      if (wordsFed.some((w) => w.word === word)) {
+        toast(`${petInfo.name} already ate that!`)
         return
       }
-      if (wordsFed.some((w) => w.word === word)) {
-        toast(`Already fed her ${word}`)
+      if (!(await isCommonWord(word))) {
+        toast.error(`"${word}" isn't a word`)
         return
       }
       if (!baseRule.matches(word)) {
@@ -186,66 +234,77 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
 
   return (
     <>
-      {/* Inline back-to-lobby */}
-      {/* Pet habitat */}
-      <div className="bg-gradient-to-b from-pink-100 to-wordy-200 rounded-3xl border-2 border-wordy-700 p-4 shadow-tile">
-        <div className={`mx-auto max-w-[240px] ${chomping ? 'snibble-chomp' : ''}`}>
-          <PetComponent
-            stage={petInfo.stage}
-            mouth={chomping || busy ? 'open' : 'smile'}
-            className="w-full h-auto snibble-pet"
-          />
-        </div>
-
-        {/* Today's fullness bar with par tick */}
-        <FullnessBar
-          fed={fedCount}
-          total={puzzle.totalSolutions}
-          par={puzzle.parCount}
-        />
-
-        <p className="text-center text-xs text-wordy-700 mt-2">
-          <span className="font-display">{petInfo.name}</span> · {petInfo.stage} · fed{' '}
-          {petInfo.growth} of {petInfo.growthRequired} days
-        </p>
-      </div>
-
       {isComplete ? (
-        <CompleteCard
-          petName={petInfo.name}
-          score={score}
-          fedCount={fedCount}
-          totalSolutions={puzzle.totalSolutions}
-          parCount={puzzle.parCount}
-        />
-      ) : (
         <>
-          {/* Today's craving banner with difficulty stars */}
-          <div className="mt-4 mb-3 bg-gradient-to-br from-amber-200 to-amber-400 text-amber-900 border border-amber-500 rounded-2xl px-4 py-3 text-center shadow-tile">
-            <p className="text-[10px] tracking-widest font-bold opacity-80 flex items-center justify-center gap-2">
-              <span>{petInfo.name.toUpperCase()}'S CRAVING</span>
-              <span title={`${puzzle.difficulty === 1 ? 'easy' : puzzle.difficulty === 2 ? 'medium' : 'hard'} day`}>
-                {'★'.repeat(puzzle.difficulty)}
-                <span className="opacity-30">{'★'.repeat(3 - puzzle.difficulty)}</span>
-              </span>
-            </p>
-            <p className="font-display text-lg mt-1 leading-tight">{puzzle.base.label}</p>
+          {/* Pet habitat (compact) */}
+          <div className="bg-gradient-to-b from-pink-100 to-wordy-200 rounded-3xl border-2 border-wordy-700 p-3 shadow-tile">
+            <div className={`mx-auto max-w-[140px] ${chomping ? 'snibble-chomp' : ''}`}>
+              <PetComponent
+                stage={petInfo.stage}
+                mouth={chomping || busy ? 'open' : 'smile'}
+                className="w-full h-auto snibble-pet"
+              />
+            </div>
+            <FullnessBar
+              fed={fedCount}
+              total={puzzle.totalSolutions}
+              par={puzzle.parCount}
+            />
           </div>
 
-          {/* Word being built — uses Wordy's .tile-placed colors so
-              the assembled letters look like a "set on the board"
-              version of the regular tray tiles. */}
-          <div className="bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2">
+          <CompleteCard
+            petName={petInfo.name}
+            score={score}
+            fedCount={fedCount}
+            totalSolutions={puzzle.totalSolutions}
+            parCount={puzzle.parCount}
+          />
+        </>
+      ) : (
+        <>
+          {/* Today's craving — single line above the pet */}
+          <div className="mb-3 bg-gradient-to-br from-amber-200 to-amber-400 text-amber-900 border border-amber-500 rounded-2xl px-4 py-2 text-center shadow-tile">
+            <p className="font-display text-base leading-tight">
+              {petInfo.name} is hungry for words that {puzzle.base.label}
+            </p>
+          </div>
+
+          {/* Pet habitat (compact) */}
+          <div className="bg-gradient-to-b from-pink-100 to-wordy-200 rounded-3xl border-2 border-wordy-700 p-3 shadow-tile">
+            <div className={`mx-auto max-w-[140px] ${chomping ? 'snibble-chomp' : ''}`}>
+              <PetComponent
+                stage={petInfo.stage}
+                mouth={chomping || busy ? 'open' : 'smile'}
+                className="w-full h-auto snibble-pet"
+              />
+            </div>
+            <FullnessBar
+              fed={fedCount}
+              total={puzzle.totalSolutions}
+              par={puzzle.parCount}
+            />
+          </div>
+
+          {/* Word being built. Click handler on the wrapper handles
+              the "tap empty space to append" case when a rack letter
+              is selected. Inner tile clicks stop propagation so they
+              handle their own tap (insert / remove). */}
+          <div
+            onClick={handleAppend}
+            className="mt-3 bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2 cursor-pointer"
+          >
             {built.length === 0 ? (
-              <span className="italic text-wordy-500 text-sm">
-                Build a word for {petInfo.name}…
+              <span className="italic text-wordy-500 text-sm pointer-events-none">
+                {selectedRackIdx !== null
+                  ? `Tap here to place "${trayLetters[selectedRackIdx]}"`
+                  : `Build a word for ${petInfo.name}…`}
               </span>
             ) : (
               built.map((letter, i) => (
                 <button
                   key={i}
-                  onClick={() => setBuilt(built.filter((_, j) => j !== i))}
-                  title="Tap to remove this letter"
+                  onClick={(e) => { e.stopPropagation(); handleBuiltTap(i) }}
+                  title={selectedRackIdx !== null ? 'Tap to insert before this letter' : 'Tap to remove this letter'}
                   className="tile tile-placed font-display text-lg w-10 h-11"
                 >
                   {letter}
@@ -254,56 +313,58 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             )}
           </div>
 
-          {/* Feed + Clear, side-by-side. Both always visible so the
-              right edge of the screen is predictable. Snibble uses
-              Wordy's .btn-primary / .btn-secondary classes verbatim
-              so dark mode and hover behaviour match. */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          {/* Letter tray */}
+          <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-2">
+            <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2 text-center">
+              TODAY'S LETTERS — TAP TO SELECT, TAP AGAIN TO PLACE
+            </p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {trayLetters.map((letter, i) => {
+                const isSelected = selectedRackIdx === i
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleRackTap(i)}
+                    className={`tile font-display text-lg w-10 h-11 ${isSelected ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-white -translate-y-0.5' : ''}`}
+                  >
+                    {letter}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Action buttons under the rack: Feed, Clear, Shuffle, Done */}
+          <div className="grid grid-cols-4 gap-1.5">
             <button
               disabled={built.length < 3 || busy}
               onClick={handleFeed}
-              className="btn-primary py-3 font-display text-lg disabled:opacity-50"
+              className="btn-primary py-2.5 font-display text-sm disabled:opacity-50"
             >
               Feed 🍃
             </button>
             <button
               disabled={built.length === 0 || busy}
               onClick={() => setBuilt([])}
-              className="btn-secondary py-3 font-display text-lg disabled:opacity-50"
+              className="btn-secondary py-2.5 font-display text-sm disabled:opacity-50"
             >
               Clear
             </button>
-          </div>
-
-          {/* Letter tray — fixed 7 columns × 2 rows for a tray of 14.
-              Each letter uses Wordy's .tile class so colors match. */}
-          <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-3">
-            <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2">
-              TODAY'S LETTERS — TAP TO REUSE ANY
-            </p>
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {puzzle.letters.map((letter, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBuilt((b) => [...b, letter])}
-                  className="tile font-display text-lg w-10 h-11"
-                >
-                  {letter}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Done-for-today — uses .btn-primary so it matches Wordy's
-              button treatment. Position differentiates it from Feed. */}
-          {fedCount > 0 && (
             <button
-              onClick={handleDoneForToday}
-              className="btn-primary w-full py-3 font-display text-lg"
+              disabled={busy}
+              onClick={handleShuffle}
+              className="btn-secondary py-2.5 font-display text-sm disabled:opacity-50"
             >
-              {confirmingDone ? 'Are you sure? Tap again' : 'Done for today 🌙'}
+              Shuffle
             </button>
-          )}
+            <button
+              disabled={fedCount === 0 || busy}
+              onClick={handleDoneForToday}
+              className="btn-secondary py-2.5 font-display text-sm disabled:opacity-50 leading-tight"
+            >
+              {confirmingDone ? 'Sure?' : 'Done 🌙'}
+            </button>
+          </div>
         </>
       )}
 
