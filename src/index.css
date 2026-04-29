@@ -1,76 +1,15 @@
+@import '../../rae-side-quest/packages/sq-ui/globals.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  /* Body matches Wordy exactly so default text colour inherits the
-     same deep purple. Wrapper divs carry the page gradient via
-     `bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100` —
-     keeping the gradient OFF body is what lets the dark-mode body
-     override go solid without fighting an inherited background-image. */
-  body {
-    font-family: 'Nunito', sans-serif;
-    background-color: #faf5ff;
-    color: #3b0764;
-    min-height: 100vh;
-  }
-}
+/* ── Snibble-specific styles below this line ──
+ * Shared SQ design system (body, .card, .btn-*, .tile, .dropdown-surface,
+ * scrollbar, dark mode block) is imported above. Anything Snibble-only
+ * lives here. */
 
 @layer components {
-  /* Mirror Wordy's `.card` exactly so all SQ apps share the same
-     panel treatment. (Keep p-4 default off — Snibble panels set
-     their own padding.) */
-  .card {
-    @apply bg-white rounded-2xl shadow-md border border-purple-100;
-  }
-  .font-display {
-    font-family: 'Fredoka One', cursive;
-  }
-
-  /* Wordy's primary button — lift verbatim. */
-  .btn-primary {
-    @apply px-4 py-2 rounded-xl font-bold text-white transition-all duration-150 active:scale-95;
-    background: linear-gradient(135deg, #9333ea, #7e22ce);
-    box-shadow: 0 3px 0 #581c87;
-  }
-  .btn-primary:hover { filter: brightness(1.08); }
-  .btn-primary:active { box-shadow: none; transform: translateY(2px); }
-
-  .btn-secondary {
-    @apply px-4 py-2 rounded-xl font-bold border-2 border-purple-400 text-purple-700 bg-white transition-all duration-150 active:scale-95;
-  }
-  .btn-secondary:hover { @apply bg-purple-50; }
-
-  /* Wordy's tile — used for the letter tray. Light gradient on a
-     soft purple border + signature offset shadow. */
-  .tile {
-    @apply flex items-center justify-center rounded-lg font-bold select-none cursor-pointer transition-all duration-100;
-    background: linear-gradient(145deg, #f3e8ff, #e9d5ff);
-    border: 1.5px solid #c084fc;
-    box-shadow: 2px 3px 0px rgba(88, 28, 135, 0.4);
-  }
-  .tile:hover {
-    box-shadow: 3px 4px 0px rgba(88, 28, 135, 0.5);
-    transform: translateY(-1px);
-  }
-  /* Used for the word-builder tiles in Snibble (Wordy uses it for
-     placed-on-board tiles). Slightly deeper purple gradient than .tile. */
-  .tile-placed {
-    background: linear-gradient(145deg, #e9d5ff, #d8b4fe);
-  }
-
-  /* Settings cog dropdown — matches Wordy's SettingsModal layout. */
-  .settings-dropdown {
-    @apply absolute right-0 top-full mt-2 w-64 z-50 p-1 shadow-lg;
-    animation: snibble-dropdown-in 0.12s ease-out;
-  }
-  .settings-row {
-    @apply flex items-center justify-between px-3 py-2.5 rounded-xl;
-  }
-  .settings-row + .settings-row {
-    @apply border-t border-wordy-100;
-  }
-
   /* Pet idle bounce + chomp + blink. */
   .snibble-pet {
     animation: snibble-idle 3s ease-in-out infinite;
@@ -104,157 +43,44 @@
   100% { transform: translateY(0)   scale(1, 1); }
 }
 
-@keyframes snibble-dropdown-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 /* ════════════════════════════════════════════════════════════
-   DARK MODE
-   Mirrors Wordy's index.css dark rules so all three SQ apps
-   (Wordy, Rungles, Snibble) share the same dark palette. The
-   `!important` overrides intentionally win over Tailwind's
-   utility classes; this is what the SQ conventions call out
-   as the standard pattern.
-   ══════════════════════════════════════════════════════════ */
+   Snibble dark-mode mappings — redirect amber/yellow/indigo
+   accents to the wordy purple palette so dark mode stays in
+   the SQ family even though Snibble's light mode uses cozy
+   accent colours.
+   ════════════════════════════════════════════════════════════ */
 
-/* ── Base ── */
-.dark body {
-  background-color: #0f0a1e;
-  color: #ede0ff;
-}
-
-/* ── Page gradients → solid dark background ── */
-.dark .from-wordy-50   { --tw-gradient-from: #0f0a1e; }
-.dark .from-wordy-100  { --tw-gradient-from: #0f0a1e; }
-.dark .from-wordy-200  { --tw-gradient-from: #1a1130; }
-.dark .from-wordy-400  { --tw-gradient-from: #6d28d9; }
-.dark .via-pink-50     { --tw-gradient-via:  #130c25; }
-.dark .via-pink-100    {
-  --tw-gradient-via: #130c25;
-  --tw-gradient-stops: var(--tw-gradient-from), #130c25 var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
-}
-.dark .to-wordy-100    { --tw-gradient-to:   #0f0a1e; }
-.dark .to-wordy-200    { --tw-gradient-to:   #130c25; }
-.dark .to-wordy-400    { --tw-gradient-to:   #6d28d9; }
-.dark .to-wordy-600    { --tw-gradient-to:   #4c1d95; }
-.dark .to-pink-50      { --tw-gradient-to:   #130c25; }
-.dark .from-pink-50    { --tw-gradient-from: #130c25; }
-.dark .from-pink-100   { --tw-gradient-from: #2d1b55; }
-
-/* Snibble-specific gradients in dark mode use the wordy purple
-   palette — NOT muted versions of their light-mode hues — so
-   Snibble's dark mode reads as part of the Wordy / SQ family
-   instead of having unique amber/yellow/indigo accents. Light
-   mode keeps its cozy character; dark mode aligns with Wordy.
-   Per the SQ conventions: any element a game has that Wordy
-   doesn't should use wordy-palette dark values. */
-
-/* Craving banner (amber-200 → amber-400 in light) — dark uses a
-   prominent mid-purple band so it still reads as "today's
-   featured rule" but in Wordy's vocabulary. */
+/* Snibble-specific gradients */
 .dark .from-amber-200  { --tw-gradient-from: #2d1b55; }
 .dark .to-amber-400    { --tw-gradient-to:   #6d28d9; }
-
-/* Word-builder tiles (yellow-200 → yellow-400 in light) — dark
-   uses a brighter purple than the letter-tray tiles so the
-   "letters you've assembled" still pop visually. */
 .dark .from-yellow-200 { --tw-gradient-from: #4c1d95; }
 .dark .to-yellow-400   { --tw-gradient-to:   #7c3aed; }
-
-/* Done-for-today (indigo-400 → indigo-600 in light) — dark uses
-   the deepest wordy purples so it reads as "calmer / wrap up"
-   next to the brighter Feed button. */
 .dark .from-indigo-400 { --tw-gradient-from: #4c1d95; }
 .dark .to-indigo-600   { --tw-gradient-to:   #2d1b55; }
-
-/* Progress-bar fill — keep some pink so the bar actually shows
-   under dark surroundings. */
 .dark .from-pink-300   { --tw-gradient-from: #831843; }
+.dark .from-pink-100   { --tw-gradient-from: #2d1b55; }
+.dark .from-wordy-200  { --tw-gradient-from: #1a1130; }
+.dark .from-wordy-400  { --tw-gradient-from: #6d28d9; }
+.dark .to-wordy-400    { --tw-gradient-to:   #6d28d9; }
+.dark .to-wordy-500    { --tw-gradient-to:   #7c3aed; }
+.dark .to-wordy-600    { --tw-gradient-to:   #4c1d95; }
 
-/* ── Tailwind colour overrides ── */
-.dark .bg-white           { background-color: #1a1130 !important; }
-.dark .bg-white\/60       { background-color: rgba(26, 17, 48, 0.6) !important; }
-.dark .bg-white\/70       { background-color: rgba(26, 17, 48, 0.7) !important; }
-.dark .bg-white\/80       { background-color: rgba(26, 17, 48, 0.8) !important; }
-/* Dropdown surfaces sit a step lighter than cards so they read as
-   floating above the page surface, not blending into it. */
-.dark .settings-dropdown.card,
-.dark .dropdown-surface {
-  background-color: #241640 !important;
-  border-color: #6d28d9 !important;
-}
-.dark .bg-wordy-50        { background-color: #1a1130 !important; }
-.dark .bg-wordy-100       { background-color: #221540 !important; }
-.dark .bg-wordy-200       { background-color: #2d1b55 !important; }
-.dark .bg-purple-50       { background-color: #1a1130 !important; }
-.dark .bg-purple-100      { background-color: #221540 !important; }
+/* Translucent white backgrounds → translucent surface 1 */
+.dark .bg-white\/60   { background-color: rgba(26, 17, 48, 0.6) !important; }
+.dark .bg-white\/70   { background-color: rgba(26, 17, 48, 0.7) !important; }
+.dark .bg-white\/80   { background-color: rgba(26, 17, 48, 0.8) !important; }
 
-.dark .border-wordy-100   { border-color: #2d1b55 !important; }
-.dark .border-wordy-200   { border-color: #3d2070 !important; }
-.dark .border-wordy-300   { border-color: #4c2a8a !important; }
-.dark .border-wordy-400   { border-color: #6d28d9 !important; }
-.dark .border-wordy-500   { border-color: #7c3aed !important; }
-.dark .border-wordy-600   { border-color: #7c3aed !important; }
-.dark .border-wordy-700   { border-color: #6d28d9 !important; }
-.dark .border-purple-100  { border-color: #2d1b55 !important; }
-/* Snibble's amber/yellow/indigo borders → wordy purple in dark
-   so the elements they outline match the new dark-mode gradients. */
+/* Snibble's amber/yellow/indigo borders → wordy purple */
 .dark .border-yellow-600  { border-color: #7c3aed !important; }
 .dark .border-amber-500   { border-color: #6d28d9 !important; }
 .dark .border-amber-700   { border-color: #6d28d9 !important; }
 .dark .border-indigo-500  { border-color: #4c1d95 !important; }
+.dark .border-wordy-300   { border-color: #4c2a8a !important; }
+.dark .border-wordy-500   { border-color: #7c3aed !important; }
+.dark .border-wordy-600   { border-color: #7c3aed !important; }
+.dark .border-wordy-700   { border-color: #6d28d9 !important; }
 
-/* Progress bar fill colour */
-.dark .to-wordy-500       { --tw-gradient-to:   #7c3aed; }
-
-.dark .text-wordy-800     { color: #ddd6fe !important; }
-.dark .text-wordy-700     { color: #c4b5fd !important; }
-.dark .text-wordy-600     { color: #a78bfa !important; }
-.dark .text-wordy-500     { color: #8b5cf6 !important; }
-.dark .text-wordy-400     { color: #7c6a9a !important; }
-.dark .text-wordy-300     { color: #5b4a72 !important; }
-.dark .text-wordy-900     { color: #ede0ff !important; }
-.dark .text-pink-500      { color: #f472b6 !important; }
-.dark .text-purple-700    { color: #c4b5fd !important; }
-/* Snibble's amber/yellow text → wordy-light in dark so the cozy
-   light-mode accent text becomes purple-light in dark for
-   palette consistency with Wordy. */
+/* Snibble's amber/yellow text → wordy-light in dark */
 .dark .text-amber-900     { color: #ddd6fe !important; }
 .dark .text-amber-700     { color: #c4b5fd !important; }
 .dark .text-yellow-900    { color: #ddd6fe !important; }
-
-/* ── Card / panel ── */
-.dark .card {
-  background-color: #1a1130;
-  border-color: #2d1b55;
-  color: #ede0ff;
-}
-
-/* ── Tile (letter tray + builder) — mirror Wordy ── */
-.dark .tile {
-  background: linear-gradient(145deg, #2d1b55, #1e1040);
-  border-color: #7c3aed;
-  box-shadow: 2px 3px 0px rgba(124, 58, 237, 0.5);
-  color: #ede0ff;
-}
-.dark .tile:hover {
-  box-shadow: 3px 4px 0px rgba(124, 58, 237, 0.6);
-}
-.dark .tile-placed {
-  background: linear-gradient(145deg, #3b1a5e, #2d1b4e);
-}
-
-/* ── Buttons — mirror Wordy ── */
-.dark .btn-secondary {
-  background-color: #1a1130;
-  border-color: #6d28d9;
-  color: #c4b5fd;
-}
-.dark .btn-secondary:hover { background-color: #221540; }
-
-/* Page bg with the existing light-mode body gradient — replace it
-   with a flat dark when .dark is on. */
-.dark html, .dark body {
-  background: #0f0a1e !important;
-}

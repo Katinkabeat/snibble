@@ -17,6 +17,7 @@ import SnibbleHeader from './SnibbleHeader.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
+import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 
@@ -35,12 +36,8 @@ export default function LobbyView({ user, onPlayDaily }) {
   const PetComponent = petInfo ? (PET_COMPONENTS[petInfo.petId] ?? Mossy) : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100 dark:bg-[#0f0a1e] dark:bg-none">
-      <SnibbleHeader user={user} />
-
-      {/* Body */}
-      <main className="max-w-[480px] mx-auto px-4 py-6 space-y-5">
-        {/* Pet hero card */}
+    <SQLobbyShell header={<SnibbleHeader user={user} />}>
+      {/* Pet hero card */}
         {petLoading || !petInfo ? (
           <div className="card p-5 text-center">
             <p className="italic text-wordy-500">Finding your pet…</p>
@@ -150,8 +147,6 @@ export default function LobbyView({ user, onPlayDaily }) {
             </p>
           </div>
         </section>
-
-      </main>
-    </div>
+    </SQLobbyShell>
   )
 }
