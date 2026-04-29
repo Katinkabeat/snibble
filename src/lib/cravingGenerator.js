@@ -34,9 +34,10 @@
 
 import { rngFromSeed, dailySeedString } from './rng.js'
 import { BASE_RULES, weightedPick } from './rules.js'
-import { getDictionary, getCommonWordSet, isValidWord } from './dictionary.js'
+import { getDictionary, getCommonWordSet, isCommonWord } from './dictionary.js'
 
-const MIN_SOLUTIONS = 8
+const MIN_SOLUTIONS = 12
+const MAX_SOLUTIONS = 30
 const MAX_REGENERATIONS = 50
 const TARGET_TRAY_SIZE = 14
 
@@ -84,10 +85,11 @@ export async function generatePuzzle(seedString) {
 
     const base = weightedPick(rng, BASE_RULES)
 
-    // Anchor words for tray construction — pick from full dictionary
-    // matches before constraining to a tray.
+    // Anchor words for tray construction — pull from common words so
+    // the tray is biased toward producing common-word solutions.
     const anchors = []
     for (const w of dictionary) {
+      if (!commonSet.has(w)) continue
       if (base.matches(w)) {
         anchors.push(w)
         if (anchors.length >= 30) break
@@ -99,39 +101,44 @@ export async function generatePuzzle(seedString) {
     const letters = buildTray(rng, tryWords, TARGET_TRAY_SIZE)
     const rackSet = new Set(letters)
 
-    // Find every solution that satisfies the rule AND is spellable.
-    const allSolutions = []
-    const commonSolutions = []
+    // Find every common-word solution that satisfies the rule AND is
+    // spellable. Rare TWL-only words are intentionally excluded from
+    // the puzzle — they're rejected on submit as "isn't a word" so
+    // the puzzle stays fair regardless of the player's vocabulary depth.
+    const solutions = []
     for (const w of dictionary) {
+      if (!commonSet.has(w)) continue
       if (!base.matches(w)) continue
       if (!spellableFrom(w, rackSet)) continue
-      allSolutions.push(w)
-      if (commonSet.has(w)) commonSolutions.push(w)
-      if (allSolutions.length > 1000) break // safety cap
+      solutions.push(w)
+      if (solutions.length > MAX_SOLUTIONS + 1) break // early exit
     }
 
-    if (allSolutions.length < MIN_SOLUTIONS) continue
+    if (solutions.length < MIN_SOLUTIONS) continue
+    if (solutions.length > MAX_SOLUTIONS) continue
 
     // Sort longest-first for nicer sample-solutions display in QA.
-    allSolutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
-    commonSolutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
+    solutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
 
-    const parCount = commonSolutions.length
-    // Difficulty thresholds tuned against 30-day previews with the
-    // 8k common-words list. 1/3 distribution per tier on average.
-    const difficulty = parCount >= 40 ? 1 : parCount >= 12 ? 2 : 3
+    const totalSolutions = solutions.length
+    // Par tick on the fullness bar — set at ~60% of total. Crossing
+    // it triggers the "fed her well today" toast as a mid-session
+    // celebration before reaching the 100% "FULL" moment.
+    const parCount = Math.ceil(totalSolutions * 0.6)
+    // Difficulty thresholds for the 12–30 solution range.
+    const difficulty = totalSolutions >= 22 ? 1 : totalSolutions >= 17 ? 2 : 3
 
     return {
       seed: seedString,
       base: { id: base.id, label: base.label, family: base.family },
       letters,
-      totalSolutions: allSolutions.length,
+      totalSolutions,
       parCount,
       difficulty,
       // QA-only — not surfaced to the player at runtime, but useful
       // for the preview script and tests.
-      sampleSolutions: allSolutions.slice(0, 12),
-      sampleCommon: commonSolutions.slice(0, 12),
+      sampleSolutions: solutions.slice(0, 12),
+      sampleCommon: solutions.slice(0, 12),
       attempt,
     }
   }
@@ -154,34 +161,16 @@ export async function generateTodaysPuzzle(date = new Date()) {
  */
 export async function validateFeed(word, ruleMatcher) {
   const w = (word || '').toUpperCase().trim()
-  if (!(await isValidWord(w))) return { ok: false, reason: 'not-a-word' }
+  if (!(await isCommonWord(w))) return { ok: false, reason: 'not-a-word' }
   if (!ruleMatcher(w)) return { ok: false, reason: 'wrong-rule' }
   return { ok: true }
 }
 
-// ───────── Scoring (Scrabble values + length bonus) ─────────
+// ───────── Scoring ─────────
+// 1 point per letter. No Scrabble values, no length bonuses — keeps
+// scores comparable across days regardless of which rare letters the
+// craving happens to land on.
 
-export const LETTER_VALUES = {
-  A:1, B:3, C:3, D:2, E:1, F:4, G:2, H:4, I:1, J:8,
-  K:5, L:1, M:3, N:1, O:1, P:3, Q:10, R:1, S:1, T:1,
-  U:1, V:4, W:4, X:8, Y:4, Z:10,
-}
-
-/**
- * Score a fed word: sum of Scrabble letter values + length bonus.
- *   - Base: sum of letter values
- *   - +5 if word is 5–6 letters
- *   - +15 if word is 7+ letters
- *
- * (The bonus tiers stack for length only — a 7-letter word gets +15,
- *  not +5+15. Encourages reaching for longer words without making
- *  short words feel worthless.)
- */
 export function scoreWord(word) {
-  const w = (word || '').toUpperCase()
-  let total = 0
-  for (const c of w) total += LETTER_VALUES[c] || 0
-  if (w.length >= 7) total += 15
-  else if (w.length >= 5) total += 5
-  return total
+  return (word || '').length
 }

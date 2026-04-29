@@ -75,6 +75,13 @@ export async function isValidWord(word) {
   return wordSet.has(w)
 }
 
+export async function isCommonWord(word) {
+  const w = (word || '').toUpperCase().trim()
+  if (!w) return false
+  const set = await loadCommonWords()
+  return set.has(w)
+}
+
 export async function getDictionary() {
   const { wordList } = await loadWordList()
   return wordList

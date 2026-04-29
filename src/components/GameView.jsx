@@ -15,8 +15,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { generateTodaysPuzzle, scoreWord, LETTER_VALUES } from '../lib/cravingGenerator.js'
-import { isValidWord } from '../lib/dictionary.js'
+import { generateTodaysPuzzle, scoreWord } from '../lib/cravingGenerator.js'
+import { isCommonWord } from '../lib/dictionary.js'
 import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
@@ -132,7 +132,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
     if (word.length < 3) return
     setBusy(true)
     try {
-      if (!(await isValidWord(word))) {
+      if (!(await isCommonWord(word))) {
         toast.error(`"${word}" isn't a word`)
         return
       }
@@ -231,20 +231,16 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                 Build a word for {petInfo.name}…
               </span>
             ) : (
-              built.map((letter, i) => {
-                const value = LETTER_VALUES[letter] ?? 0
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setBuilt(built.filter((_, j) => j !== i))}
-                    title="Tap to remove this letter"
-                    className="tile tile-placed font-display text-lg w-9 h-10"
-                  >
-                    {letter}
-                    {value > 0 && <span className="tile-value">{value}</span>}
-                  </button>
-                )
-              })
+              built.map((letter, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBuilt(built.filter((_, j) => j !== i))}
+                  title="Tap to remove this letter"
+                  className="tile tile-placed font-display text-lg w-10 h-11"
+                >
+                  {letter}
+                </button>
+              ))
             )}
           </div>
 
@@ -275,20 +271,16 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2">
               TODAY'S LETTERS — TAP TO REUSE ANY
             </p>
-            <div className="grid grid-cols-7 gap-1.5">
-              {puzzle.letters.map((letter, i) => {
-                const value = LETTER_VALUES[letter] ?? 0
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setBuilt((b) => [...b, letter])}
-                    className="tile font-display text-lg h-11"
-                  >
-                    {letter}
-                    {value > 0 && <span className="tile-value">{value}</span>}
-                  </button>
-                )
-              })}
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {puzzle.letters.map((letter, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBuilt((b) => [...b, letter])}
+                  className="tile font-display text-lg w-10 h-11"
+                >
+                  {letter}
+                </button>
+              ))}
             </div>
           </div>
 
