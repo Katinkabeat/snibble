@@ -96,6 +96,8 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
   const [built, setBuilt] = useState([])
   const [busy, setBusy] = useState(false)
   const [chomping, setChomping] = useState(false)
+  const [confirmingDone, setConfirmingDone] = useState(false)
+  const confirmTimerRef = useRef(null)
   const milestonesRef = useRef(new Set())
   const parToastShownRef = useRef(false)
 
@@ -168,6 +170,14 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
       toast(`Try at least one word first — anything counts.`)
       return
     }
+    if (!confirmingDone) {
+      setConfirmingDone(true)
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      confirmTimerRef.current = window.setTimeout(() => setConfirmingDone(false), 3000)
+      return
+    }
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    setConfirmingDone(false)
     await onMarkComplete()
     toast.success(`${petInfo.name} is full enough 🌙`)
   }
@@ -291,7 +301,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
               onClick={handleDoneForToday}
               className="btn-primary w-full py-3 font-display text-lg"
             >
-              Done for today 🌙
+              {confirmingDone ? 'Are you sure? Tap again' : 'Done for today 🌙'}
             </button>
           )}
         </>

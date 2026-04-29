@@ -39,7 +39,7 @@ import { getDictionary, getCommonWordSet, isCommonWord } from './dictionary.js'
 const MIN_SOLUTIONS = 12
 const MAX_SOLUTIONS = 30
 const MAX_REGENERATIONS = 50
-const TARGET_TRAY_SIZE = 14
+const TARGET_TRAY_SIZE = 7
 
 // ───────── Letter pool & tray construction ─────────
 
