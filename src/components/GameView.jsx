@@ -24,11 +24,12 @@ import SnibbleHeader from './SnibbleHeader.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
+import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 const MILESTONE_MARKS = [5, 10, 25, 50] // word-count milestones for toasts
 
-export default function GameView({ user }) {
+export default function GameView({ user, onBack }) {
   const [puzzle, setPuzzle] = useState(null)
   const [puzzleErr, setPuzzleErr] = useState(null)
   const { petInfo, loading: petLoading, tickGrowth } = useActivePet(user.id)
@@ -49,11 +50,11 @@ export default function GameView({ user }) {
     return () => { active = false }
   }, [])
 
-  if (petLoading || !puzzle) return <ShellWithHeader user={user}><Loading err={puzzleErr} /></ShellWithHeader>
-  if (!petInfo) return <ShellWithHeader user={user}><Loading err="No pet — something went wrong." /></ShellWithHeader>
+  if (petLoading || !puzzle) return <ShellWithHeader user={user} onBack={onBack}><Loading err={puzzleErr} /></ShellWithHeader>
+  if (!petInfo) return <ShellWithHeader user={user} onBack={onBack}><Loading err="No pet — something went wrong." /></ShellWithHeader>
 
   return (
-    <ShellWithHeader user={user}>
+    <ShellWithHeader user={user} onBack={onBack}>
       <GameLoop
         puzzle={puzzle}
         petInfo={petInfo}
@@ -65,12 +66,17 @@ export default function GameView({ user }) {
   )
 }
 
-function ShellWithHeader({ user, children }) {
+function ShellWithHeader({ user, onBack, children }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-wordy-50 via-pink-50 to-wordy-100 dark:bg-[#0f0a1e] dark:bg-none">
-      <SnibbleHeader user={user} />
-      <main className="max-w-[480px] mx-auto px-4 py-4 pb-12">{children}</main>
-    </div>
+    <SQBoardShell
+      width="narrow"
+      header={<SnibbleHeader user={user} />}
+      subHeader={
+        <SQBoardHeader backLabel="← Back" onBackClick={onBack} />
+      }
+    >
+      {children}
+    </SQBoardShell>
   )
 }
 
@@ -171,18 +177,6 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
   return (
     <>
       {/* Inline back-to-lobby */}
-      <div className="mb-2">
-        <button
-          onClick={() => {
-            window.history.pushState({}, '', window.location.pathname)
-            window.dispatchEvent(new PopStateEvent('popstate'))
-          }}
-          className="text-sm font-bold text-wordy-400 hover:text-wordy-700 transition-colors"
-        >
-          ← Lobby
-        </button>
-      </div>
-
       {/* Pet habitat */}
       <div className="bg-gradient-to-b from-pink-100 to-wordy-200 rounded-3xl border-2 border-wordy-700 p-4 shadow-tile">
         <div className={`mx-auto max-w-[240px] ${chomping ? 'snibble-chomp' : ''}`}>

@@ -71,7 +71,9 @@ export default function App() {
   if (queryParam('view') === 'pets') return <PetPreview />
 
   // ?play=daily → daily play loop. Anything else (default) → lobby.
-  if (queryParam('play') === 'daily') return <GameView user={session.user} />
+  if (queryParam('play') === 'daily') {
+    return <GameView user={session.user} onBack={() => goTo('')} />
+  }
   return <LobbyView user={session.user} onPlayDaily={() => goTo('?play=daily')} />
 }
 
