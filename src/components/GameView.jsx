@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { generateTodaysPuzzle, scoreWord } from '../lib/cravingGenerator.js'
+import { generateTodaysPuzzle, scoreWord, LETTER_VALUES } from '../lib/cravingGenerator.js'
 import { isValidWord } from '../lib/dictionary.js'
 import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
@@ -231,16 +231,20 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
                 Build a word for {petInfo.name}…
               </span>
             ) : (
-              built.map((letter, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBuilt(built.filter((_, j) => j !== i))}
-                  title="Tap to remove this letter"
-                  className="tile tile-placed font-display text-lg w-9 h-10"
-                >
-                  {letter}
-                </button>
-              ))
+              built.map((letter, i) => {
+                const value = LETTER_VALUES[letter] ?? 0
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setBuilt(built.filter((_, j) => j !== i))}
+                    title="Tap to remove this letter"
+                    className="tile tile-placed font-display text-lg w-9 h-10"
+                  >
+                    {letter}
+                    {value > 0 && <span className="tile-value">{value}</span>}
+                  </button>
+                )
+              })
             )}
           </div>
 
@@ -272,15 +276,19 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
               TODAY'S LETTERS — TAP TO REUSE ANY
             </p>
             <div className="grid grid-cols-7 gap-1.5">
-              {puzzle.letters.map((letter, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBuilt((b) => [...b, letter])}
-                  className="tile font-display text-lg h-11"
-                >
-                  {letter}
-                </button>
-              ))}
+              {puzzle.letters.map((letter, i) => {
+                const value = LETTER_VALUES[letter] ?? 0
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setBuilt((b) => [...b, letter])}
+                    className="tile font-display text-lg h-11"
+                  >
+                    {letter}
+                    {value > 0 && <span className="tile-value">{value}</span>}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
