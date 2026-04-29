@@ -98,7 +98,6 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
   const [chomping, setChomping] = useState(false)
   const [confirmingDone, setConfirmingDone] = useState(false)
   const [trayLetters, setTrayLetters] = useState(() => [...puzzle.letters])
-  const [selectedRackIdx, setSelectedRackIdx] = useState(null)
   const confirmTimerRef = useRef(null)
   const milestonesRef = useRef(new Set())
   const parToastShownRef = useRef(false)
@@ -110,43 +109,6 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     setTrayLetters(shuffled)
-    setSelectedRackIdx(null)
-  }
-
-  function handleRackTap(idx) {
-    if (selectedRackIdx === null) {
-      setSelectedRackIdx(idx)
-      return
-    }
-    if (selectedRackIdx === idx) {
-      setSelectedRackIdx(null)
-      return
-    }
-    // Two rack tiles tapped → swap their positions on the rack
-    const next = [...trayLetters]
-    ;[next[selectedRackIdx], next[idx]] = [next[idx], next[selectedRackIdx]]
-    setTrayLetters(next)
-    setSelectedRackIdx(null)
-  }
-
-  function handleBuiltTap(idx) {
-    if (selectedRackIdx === null) {
-      // Nothing selected → remove this letter from the built word
-      setBuilt(built.filter((_, j) => j !== idx))
-      return
-    }
-    // Rack letter selected → insert it to the LEFT of this built tile
-    const letter = trayLetters[selectedRackIdx]
-    const next = [...built.slice(0, idx), letter, ...built.slice(idx)]
-    setBuilt(next)
-    setSelectedRackIdx(null)
-  }
-
-  function handleAppend() {
-    if (selectedRackIdx === null) return
-    const letter = trayLetters[selectedRackIdx]
-    setBuilt((b) => [...b, letter])
-    setSelectedRackIdx(null)
   }
 
   const baseRule = useMemo(() => RULES_BY_ID[puzzle.base.id], [puzzle.base.id])
@@ -285,26 +247,18 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             />
           </div>
 
-          {/* Word being built. Click handler on the wrapper handles
-              the "tap empty space to append" case when a rack letter
-              is selected. Inner tile clicks stop propagation so they
-              handle their own tap (insert / remove). */}
-          <div
-            onClick={handleAppend}
-            className="mt-3 bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2 cursor-pointer"
-          >
+          {/* Word being built */}
+          <div className="mt-3 bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2">
             {built.length === 0 ? (
-              <span className="italic text-wordy-500 text-sm pointer-events-none">
-                {selectedRackIdx !== null
-                  ? `Tap here to place "${trayLetters[selectedRackIdx]}"`
-                  : `Build a word for ${petInfo.name}…`}
+              <span className="italic text-wordy-500 text-sm">
+                Build a word for {petInfo.name}…
               </span>
             ) : (
               built.map((letter, i) => (
                 <button
                   key={i}
-                  onClick={(e) => { e.stopPropagation(); handleBuiltTap(i) }}
-                  title={selectedRackIdx !== null ? 'Tap to insert before this letter' : 'Tap to remove this letter'}
+                  onClick={() => setBuilt(built.filter((_, j) => j !== i))}
+                  title="Tap to remove this letter"
                   className="tile tile-placed font-display text-lg w-10 h-11"
                 >
                   {letter}
@@ -316,21 +270,18 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
           {/* Letter tray */}
           <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-2">
             <p className="text-[11px] tracking-widest font-bold text-wordy-700 mb-2 text-center">
-              TODAY'S LETTERS — TAP TO SELECT, TAP AGAIN TO PLACE
+              TODAY'S LETTERS — TAP TO REUSE ANY
             </p>
             <div className="flex flex-wrap justify-center gap-1.5">
-              {trayLetters.map((letter, i) => {
-                const isSelected = selectedRackIdx === i
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleRackTap(i)}
-                    className={`tile font-display text-lg w-10 h-11 ${isSelected ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-white -translate-y-0.5' : ''}`}
-                  >
-                    {letter}
-                  </button>
-                )
-              })}
+              {trayLetters.map((letter, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBuilt((b) => [...b, letter])}
+                  className="tile font-display text-lg w-10 h-11"
+                >
+                  {letter}
+                </button>
+              ))}
             </div>
           </div>
 
