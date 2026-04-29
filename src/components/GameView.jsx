@@ -72,7 +72,7 @@ function ShellWithHeader({ user, onBack, children }) {
       width="narrow"
       header={<SnibbleHeader user={user} />}
       subHeader={
-        <SQBoardHeader backLabel="← Back" onBackClick={onBack} />
+        <SQBoardHeader backLabel="← Lobby" onBackClick={onBack} />
       }
     >
       {children}
