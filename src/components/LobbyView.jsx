@@ -21,7 +21,7 @@ import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 
-export default function LobbyView({ user, onPlayDaily }) {
+export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
   const { petInfo, loading: petLoading } = useActivePet(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
 
@@ -135,17 +135,23 @@ export default function LobbyView({ user, onPlayDaily }) {
           </div>
         </section>
 
-        {/* Sanctuary placeholder — will become a real screen in a few iterations */}
+        {/* Sanctuary — Pokemon-style pet collection */}
         <section>
           <h2 className="font-display text-xl text-wordy-700 mb-2 px-1">🌿 Sanctuary</h2>
-          <div className="card p-5 opacity-60 cursor-not-allowed" aria-disabled="true">
-            <p className="text-sm text-wordy-700">
-              {petInfo?.name ? `${petInfo.name} is still growing.` : 'Your meadow is empty for now.'}
-            </p>
-            <p className="text-[11px] text-wordy-500 mt-1 italic">
-              Graduated pets will join the meadow here. Coming once the first pet matures.
-            </p>
-          </div>
+          <button
+            onClick={onOpenSanctuary}
+            className="w-full card p-5 text-left hover:shadow-tile-hover transition-shadow"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-lg text-wordy-800">Your collection</p>
+                <p className="text-sm text-wordy-600 mt-1">
+                  Meet the pets you've raised — and a few who haven't shown themselves yet.
+                </p>
+              </div>
+              <div className="btn-secondary shrink-0 text-sm font-display">Open →</div>
+            </div>
+          </button>
         </section>
     </SQLobbyShell>
   )

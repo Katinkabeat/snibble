@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase.js'
 import PetPreview from './components/PetPreview.jsx'
 import LobbyView from './components/LobbyView.jsx'
 import GameView from './components/GameView.jsx'
+import SanctuaryView from './components/SanctuaryView.jsx'
 import { preloadDictionary } from './lib/dictionary.js'
 
 // SQ hub URL — unauthed visitors get bounced here so the hub handles login.
@@ -70,11 +71,20 @@ export default function App() {
   // anyway during build mode.
   if (queryParam('view') === 'pets') return <PetPreview />
 
-  // ?play=daily → daily play loop. Anything else (default) → lobby.
+  // ?play=daily → daily play loop. ?view=sanctuary → sanctuary. Else → lobby.
   if (queryParam('play') === 'daily') {
     return <GameView user={session.user} onBack={() => goTo('')} />
   }
-  return <LobbyView user={session.user} onPlayDaily={() => goTo('?play=daily')} />
+  if (queryParam('view') === 'sanctuary') {
+    return <SanctuaryView user={session.user} onBack={() => goTo('')} />
+  }
+  return (
+    <LobbyView
+      user={session.user}
+      onPlayDaily={() => goTo('?play=daily')}
+      onOpenSanctuary={() => goTo('?view=sanctuary')}
+    />
+  )
 }
 
 /** Navigate within /snibble/ by replacing the query string. */
