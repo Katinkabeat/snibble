@@ -264,7 +264,10 @@ The `sn_app_settings` table + the RPC live in
   Shuffle/Done; Done is a two-tap confirm
 - ✅ Admin testing tools (Redo today + Reset leaderboard)
 - ✅ Dark mode aligned to Wordy
-- ⏳ **Sanctuary screen** — biggest remaining piece
+- ✅ **Sanctuary screen** — Pokemon-style card grid (PetCard +
+  PetModal + SanctuaryView + useSanctuary hook). Hard-mode hints
+  hardcoded in `src/lib/petHints.js`. Full 13-pet roster seeded
+  in `sn_pets`.
 - ⏳ How to play content — deferred per Rae until gameplay finalises
 - ⏳ Pip + Mochi adolescent/adult stages — not urgent (no tester
   reaches them for 31+ days)
