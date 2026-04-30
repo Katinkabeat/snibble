@@ -34,29 +34,32 @@ function hasDoubleLetter(w) {
 }
 
 // ───────── Suffix rules ─────────
+// Weights deweighted (~halved) on 2026-04-30 because the suffix family
+// was dominating ~67% of daily picks under the previous balance. Goal
+// is ~40% of picks; contains/starts/special boosted to fill the gap.
 const SUFFIXES = [
   // Common, friendly
-  { suffix: 'OW',   weight: 6 },
-  { suffix: 'AT',   weight: 6 },
-  { suffix: 'IN',   weight: 5 },
-  { suffix: 'OG',   weight: 5 },
-  { suffix: 'EN',   weight: 5 },
-  { suffix: 'ED',   weight: 5, minWordLen: 4 }, // skip "ED" alone
-  { suffix: 'ER',   weight: 5, minWordLen: 4 },
-  { suffix: 'ING',  weight: 5 },
-  { suffix: 'LY',   weight: 4, minWordLen: 4 },
-  { suffix: 'EAR',  weight: 4 },
-  { suffix: 'ICK',  weight: 4 },
-  { suffix: 'ALL',  weight: 4 },
-  { suffix: 'EST',  weight: 4 },
-  { suffix: 'OOK',  weight: 3 },
-  { suffix: 'ARK',  weight: 3 },
-  { suffix: 'EE',   weight: 3 },
-  { suffix: 'Y',    weight: 4, minWordLen: 3 },
+  { suffix: 'OW',   weight: 3 },
+  { suffix: 'AT',   weight: 3 },
+  { suffix: 'IN',   weight: 3 },
+  { suffix: 'OG',   weight: 3 },
+  { suffix: 'EN',   weight: 3 },
+  { suffix: 'ED',   weight: 3, minWordLen: 4 }, // skip "ED" alone
+  { suffix: 'ER',   weight: 3, minWordLen: 4 },
+  { suffix: 'ING',  weight: 3 },
+  { suffix: 'LY',   weight: 2, minWordLen: 4 },
+  { suffix: 'EAR',  weight: 2 },
+  { suffix: 'ICK',  weight: 2 },
+  { suffix: 'ALL',  weight: 2 },
+  { suffix: 'EST',  weight: 2 },
+  { suffix: 'OOK',  weight: 2 },
+  { suffix: 'ARK',  weight: 2 },
+  { suffix: 'EE',   weight: 2 },
+  { suffix: 'Y',    weight: 2, minWordLen: 3 },
   // Slightly trickier
-  { suffix: 'IGHT', weight: 2 },
-  { suffix: 'ATE',  weight: 2 },
-  { suffix: 'ION',  weight: 2 },
+  { suffix: 'IGHT', weight: 1 },
+  { suffix: 'ATE',  weight: 1 },
+  { suffix: 'ION',  weight: 1 },
 ]
 
 const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3 }) => ({
@@ -68,14 +71,18 @@ const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3 }) => ({
 }))
 
 // ───────── Contains rules ─────────
+// Slightly boosted + a few new patterns added on 2026-04-30 for variety.
 const CONTAINS = [
-  { sub: 'OO', weight: 4 },
-  { sub: 'EA', weight: 4 },
-  { sub: 'OU', weight: 3 },
-  { sub: 'EE', weight: 3 },
-  { sub: 'CH', weight: 3 },
-  { sub: 'SH', weight: 3 },
-  { sub: 'TH', weight: 3 },
+  { sub: 'OO', weight: 5 },
+  { sub: 'EA', weight: 5 },
+  { sub: 'OU', weight: 4 },
+  { sub: 'EE', weight: 4 },
+  { sub: 'CH', weight: 4 },
+  { sub: 'SH', weight: 4 },
+  { sub: 'TH', weight: 4 },
+  { sub: 'AI', weight: 3 },
+  { sub: 'OA', weight: 3 },
+  { sub: 'ST', weight: 3 },
 ]
 
 const containsRules = CONTAINS.map(({ sub, weight }) => ({
@@ -87,12 +94,18 @@ const containsRules = CONTAINS.map(({ sub, weight }) => ({
 }))
 
 // ───────── Starts-with rules ─────────
+// Boosted + expanded on 2026-04-30 (was very rarely picked; ~3% of days).
 const STARTS_WITH = [
-  { prefix: 'B',  weight: 3 },
-  { prefix: 'S',  weight: 3 },
-  { prefix: 'TH', weight: 2 },
-  { prefix: 'PR', weight: 2 },
-  { prefix: 'CH', weight: 2 },
+  { prefix: 'B',  weight: 5 },
+  { prefix: 'S',  weight: 5 },
+  { prefix: 'F',  weight: 4 },
+  { prefix: 'M',  weight: 4 },
+  { prefix: 'TH', weight: 3 },
+  { prefix: 'PR', weight: 3 },
+  { prefix: 'CH', weight: 3 },
+  { prefix: 'BR', weight: 2 },
+  { prefix: 'ST', weight: 2 },
+  { prefix: 'TR', weight: 2 },
 ]
 
 const startsRules = STARTS_WITH.map(({ prefix, weight }) => ({
@@ -104,20 +117,28 @@ const startsRules = STARTS_WITH.map(({ prefix, weight }) => ({
 }))
 
 // ───────── Special rules ─────────
+// Boosted on 2026-04-30 + added "ends in a vowel" for more variety.
 const specialRules = [
   {
     id: 'special:double-letter',
     family: 'special',
     label: 'contain a double letter',
     matches: (w) => w.length >= 3 && hasDoubleLetter(w),
-    weight: 3,
+    weight: 8,
   },
   {
     id: 'special:vowel-rich',
     family: 'special',
     label: 'have 3 or more vowels',
     matches: (w) => w.length >= 4 && vowelCount(w) >= 3,
-    weight: 2,
+    weight: 6,
+  },
+  {
+    id: 'special:ends-vowel',
+    family: 'special',
+    label: 'end in a vowel',
+    matches: (w) => w.length >= 3 && isVowel(w[w.length - 1]),
+    weight: 5,
   },
 ]
 

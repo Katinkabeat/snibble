@@ -137,11 +137,17 @@ craving banner reads `${pet} is hungry for words that ${label}`.
 Rare letters (Q, X, Z), prefix-heavy rules, palindromes are NOT enabled
 for v1 (Mossy-friendly bias). Add later for harder pets.
 
-**Open follow-up:** rule-family variety. With the 7-tile tray + 32.6k
-common-word list, suffix rules dominate the picker (most days fall
-into `end in -X` cravings). Worth rebalancing weights in `rules.js`
-in a future tuning pass — boost contains/starts/special weights, or
-deweight suffix.
+**Generator tuning (2026-04-30):** rule-family weights rebalanced.
+Before: ~67% suffix dominance (suffix family weight total = 81 vs
+contains 23, starts 12, special 5). After: target distribution
+~33/29/24/14 across suffix/contains/starts/special. Changes:
+- Suffix weights ~halved (most 5→3, lowest 2→1)
+- Contains: bumped existing + added -AI-, -OA-, -ST-
+- Starts-with: bumped existing + added F-, M-, BR-, ST-, TR-
+- Special: bumped existing + added "end in a vowel"
+
+Verified via `node scripts/preview-cravings.mjs`. 30-day sample now
+shows all four families regularly + better easy/medium/hard mix.
 
 ### Scoring
 
