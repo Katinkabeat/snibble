@@ -37,7 +37,7 @@ export default function SnibbleHeader({ user }) {
       <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center justify-between">
         {/* Left: avatar + game name */}
         <div className="flex items-center gap-2">
-          <SnibbleAvatarMenu profile={profile} />
+          <SnibbleAvatarMenu profile={profile} user={user} />
           <span className="font-display text-2xl text-wordy-700">Snibble</span>
         </div>
 

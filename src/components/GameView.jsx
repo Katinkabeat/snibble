@@ -21,6 +21,7 @@ import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
+import StatsModal from './StatsModal.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
@@ -56,11 +57,13 @@ export default function GameView({ user, onBack }) {
   return (
     <ShellWithHeader user={user} onBack={onBack}>
       <GameLoop
+        user={user}
         puzzle={puzzle}
         petInfo={petInfo}
         dailyState={dailyState}
         onFeed={recordFeed}
         onMarkComplete={markComplete}
+        onBack={onBack}
       />
     </ShellWithHeader>
   )
@@ -92,11 +95,12 @@ function Loading({ err }) {
 
 // ─────────────────────────────────────────────────────────────
 
-function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
+function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, onBack }) {
   const [built, setBuilt] = useState([])
   const [busy, setBusy] = useState(false)
   const [chomping, setChomping] = useState(false)
   const [confirmingDone, setConfirmingDone] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const [trayLetters, setTrayLetters] = useState(() => [...puzzle.letters])
   const confirmTimerRef = useRef(null)
   const milestonesRef = useRef(new Set())
@@ -190,6 +194,7 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
     setConfirmingDone(false)
     await onMarkComplete()
     toast.success(`${petInfo.name} is full enough 🌙`)
+    setShowStats(true)
   }
 
   const PetComponent = PET_COMPONENTS[petInfo.petId] ?? Mossy
@@ -335,6 +340,16 @@ function GameLoop({ puzzle, petInfo, dailyState, onFeed, onMarkComplete }) {
             ))}
           </div>
         </div>
+      )}
+      {showStats && (
+        <StatsModal
+          user={user}
+          defaultTab="leaderboard"
+          onClose={() => {
+            setShowStats(false)
+            onBack()
+          }}
+        />
       )}
     </>
   )

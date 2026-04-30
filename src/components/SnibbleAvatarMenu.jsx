@@ -3,20 +3,21 @@
 //
 //  Visual chrome (button, surface, identity card, menu item rows) is
 //  shared via sq-ui so Snibble's avatar menu matches Wordy/Rungles
-//  exactly. Snibble-specific bit: the Stats action shows a "coming
-//  in v2" toast since matchplay-based stats don't exist yet.
+//  exactly. The Stats item opens StatsModal (Daily Leaderboard +
+//  My Stats tabs).
 // ────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
-import toast from 'react-hot-toast'
 import {
   SQAvatarButton,
   SQAvatarDropdown,
   SQAvatarMenuItem,
 } from '../../../rae-side-quest/packages/sq-ui/index.js'
+import StatsModal from './StatsModal.jsx'
 
-export default function SnibbleAvatarMenu({ profile }) {
+export default function SnibbleAvatarMenu({ profile, user }) {
   const [open, setOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   return (
     <div className="relative">
@@ -34,13 +35,15 @@ export default function SnibbleAvatarMenu({ profile }) {
         <SQAvatarMenuItem
           onClick={() => {
             setOpen(false)
-            toast('Snibble stats coming in v2 — leaderboards land with matches.')
+            setStatsOpen(true)
           }}
         >
           📊 Stats
-          <span className="ml-1 text-[10px] text-wordy-400">soon</span>
         </SQAvatarMenuItem>
       </SQAvatarDropdown>
+      {statsOpen && user && (
+        <StatsModal user={user} onClose={() => setStatsOpen(false)} />
+      )}
     </div>
   )
 }

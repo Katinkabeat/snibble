@@ -5,7 +5,7 @@
 //  Locked variant just shows the hint and nothing else.
 // ────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
@@ -19,6 +19,13 @@ function deriveStage(growth) {
 }
 
 export default function PetModal({ pet, onClose }) {
+  // Pop-in transition — start from 0 then flip to 1 next tick.
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
   // Close on Escape
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -33,13 +40,16 @@ export default function PetModal({ pet, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/40"
+      className={`fixed inset-0 z-50 grid place-items-center p-4 bg-black/40 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`relative card p-6 w-full max-w-sm flex flex-col min-h-[600px] ${isLocked ? '!bg-[#1a1130] !border-[#2d1b55]' : ''}`}
+        className={`relative card p-6 w-full max-w-sm flex flex-col min-h-[600px] transition-all duration-300 ease-out ${
+          open ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+        } ${isLocked ? '!bg-[#1a1130] !border-[#2d1b55]' : ''}`}
+        style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
