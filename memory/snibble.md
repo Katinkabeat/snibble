@@ -53,7 +53,7 @@ src/
 
 public/
 ├── words.txt                    # TWL Scrabble dictionary (173k words, copied from Wordy)
-└── common-words.txt             # 8221 common words (top 10k Google English × TWL)
+└── common-words.txt             # 32,639 common words (top 50k Google English × TWL)
 
 supabase/migrations/
 ├── sn_initial_schema.sql        # sn_pets, sn_progress, sn_daily_feeds + RLS
@@ -94,7 +94,7 @@ Functions:
   puzzle out (verified by `scripts/test-determinism.mjs`).
 - Match seeds (v2) will use the same RNG with `snibble:match:<id>` seeds.
 
-## Generator (v2 — phaseless)
+## Generator (v2 — phaseless, common-words-only)
 
 Single rule per day. Output:
 
@@ -102,15 +102,26 @@ Single rule per day. Output:
 {
   seed,
   base: { id, label, family },
-  letters: ['A', 'B', ...],     // 14 letters
-  totalSolutions: number,        // every TWL word matching today's rule + tray
-  parCount: number,              // subset that's also in common-words list (par line)
-  difficulty: 1 | 2 | 3,         // ★ rating from parCount (≥40 → ★, ≥12 → ★★, else ★★★)
+  letters: ['A', 'B', ...],     // 7 letters (matches Wordy's rack size)
+  totalSolutions: number,        // common-word matches that are spellable from tray
+  parCount: number,              // ~60% of totalSolutions (mid-session celebration tick)
+  difficulty: 1 | 2 | 3,         // ★ from totalSolutions: ≥22 → ★, ≥17 → ★★, else ★★★
   sampleSolutions, sampleCommon  // QA-only previews
 }
 ```
 
-Solvability check: regenerates up to 50× until `totalSolutions ≥ 8`.
+**Solvability bounds:** regenerates up to 50× until
+`12 ≤ totalSolutions ≤ 30`. Both bounds enforced. Anchor words for
+the tray are pulled from common-words only so the tray biases toward
+producing common-word solutions instead of being dominated by
+rare-letter pulls.
+
+**Solutions are common-words only.** Rare TWL words (ETUI, OBIA,
+OILILY, OAT-rank-32k tier) are intentionally excluded — they're
+rejected on submit as "isn't a word" so the puzzle stays fair
+regardless of the player's vocabulary depth. Decision rationale: a
+sample puzzle hit 554 valid TWL words against the old loose model;
+common-words-only typically lands at 15–25.
 
 Rule families weighted (in `rules.js`):
 - Suffix (-OW, -AT, -IN, -OG, -EN, -ED, -ER, -ING, -LY, -EAR, -ICK,
@@ -119,15 +130,26 @@ Rule families weighted (in `rules.js`):
 - Starts-with (B, S, TH, PR, CH)
 - Special (double letter, vowel-rich)
 
+Rule labels are written in "that"-clause form (`end in -OW`,
+`start with CH-`, `contain -OO-`, `have 3 or more vowels`) so the
+craving banner reads `${pet} is hungry for words that ${label}`.
+
 Rare letters (Q, X, Z), prefix-heavy rules, palindromes are NOT enabled
 for v1 (Mossy-friendly bias). Add later for harder pets.
 
+**Open follow-up:** rule-family variety. With the 7-tile tray + 32.6k
+common-word list, suffix rules dominate the picker (most days fall
+into `end in -X` cravings). Worth rebalancing weights in `rules.js`
+in a future tuning pass — boost contains/starts/special weights, or
+deweight suffix.
+
 ### Scoring
 
-`scoreWord(word)` = sum of Scrabble letter values + length bonus:
-- `+5` for 5–6 letter words
-- `+15` for 7+ letter words
-- Bonus tiers don't stack (a 7-letter word gets +15 only).
+`scoreWord(word)` = `word.length`. One point per letter, no Scrabble
+values, no length bonuses. Keeps day-to-day scores comparable
+regardless of which rare letters the craving lands on. Rationale: a
+Z-heavy day under Scrabble values inflated everyone's score 2× over
+a vowel-heavy day; flat per-letter scoring removes that distortion.
 
 ## UI design — locked
 
@@ -140,20 +162,45 @@ for v1 (Mossy-friendly bias). Add later for harder pets.
    - Reset leaderboard (RPC call with confirm)
 5. Log out (rose colour)
 
-**Game view bottom area:**
-- Word builder (full-width, flex-wrap for long words)
-- Feed | Clear side-by-side, each 50% width, both always visible.
-  Feed = `.btn-primary`, Clear = `.btn-secondary`.
-- Letter tray: 14 letters in `grid-cols-7` (two rows of seven)
-- Done-for-today: full-width `.btn-primary`, only shown after first feed
+**Game view layout (top → bottom):**
+- Craving banner (single line, gold gradient): `${pet} is hungry for
+  words that ${rule}`. No difficulty stars on the game page — the
+  lobby card surfaces difficulty.
+- Pet habitat card: compact (`max-w-[140px]` pet, `p-3` card padding).
+  Pet name + growth count are NOT shown on the game page; the lobby
+  card already has them.
+- Fullness bar inside the pet card.
+- Word builder (full-width, flex-wrap for long words). Tap a built
+  tile to remove it.
+- Letter tray: 7 letters, `flex flex-wrap justify-center` (matches
+  Wordy's rack size). Tap a tile to append it to the built word.
+  Letters are reusable (tray is a hint, not a rack).
+- Action row, 4-up grid: `[Feed 🍃] [Clear] [Shuffle] [Done 🌙]`.
+  Feed = `.btn-primary`, others = `.btn-secondary`. Done-for-today
+  is a two-tap confirm (label flips to "Sure?" for 3 seconds before
+  the second tap commits).
+- Shuffle button randomises tray order in place via Fisher-Yates.
 
 **Fullness bar:**
 - Pink-to-purple fill = `wordsFed / totalSolutions`
 - Vertical amber tick at `parCount / totalSolutions` = par line
+  (parCount is now derived as `~60% of totalSolutions` since solutions
+  are already common-words only)
 - Crossing par triggers a celebration toast
 - Hitting 100% triggers "Mossy is FULL — you got them all!"
 
 **Milestone toasts** at 5, 10, 25, 50 words fed.
+
+**Feed validation order** (in `handleFeed`, `GameView.jsx`):
+1. Duplicate check first → toast `${petName} already ate that!`
+2. Common-word check → toast `"${word}" isn't a word`
+3. Rule match → toast `${pet} turns away — wants ${rule label}`
+4. Accept → record feed, score = `word.length`, update fullness bar.
+
+The dup-first ordering matters: the previous order checked the
+dictionary first, so a previously-fed word that happened to fail the
+common-word test would say "isn't a word" instead of the friendlier
+"already ate that".
 
 ## Styling — Wordy is the source of truth
 
@@ -203,15 +250,18 @@ The `sn_app_settings` table + the RPC live in
 - ✅ SQ hub catalog row (admin-bypass via Phase 7 gating)
 - ✅ Craving generator + solvability check + determinism
 - ✅ Dictionary + common-words list + par line
-- ✅ Difficulty stars
-- ✅ Length bonuses on scoring
+- ✅ Difficulty stars (lobby surfaces them; game page is clean)
+- ✅ 1-point-per-letter scoring (Scrabble values + length bonuses
+  removed 2026-04-29 for cross-day comparability)
+- ✅ Common-words-only puzzle (totalSolutions bounded 12–30, dict
+  expanded to 32.6k words on 2026-04-29)
 - ✅ Mossy 3 stages + Pip baby + Mochi baby
 - ✅ Lobby + GameView with header per SQ conventions
 - ✅ Avatar menu + cog dropdown
 - ✅ Phaseless single-craving model (rationale: phases created
   dead-ends; see project_sq_snibble.md)
-- ✅ Tray 14 letters in 7×2; Feed/Clear side-by-side; prominent
-  Done-for-today
+- ✅ 7-tile tray (`flex flex-wrap`); 4-up action row Feed/Clear/
+  Shuffle/Done; Done is a two-tap confirm
 - ✅ Admin testing tools (Redo today + Reset leaderboard)
 - ✅ Dark mode aligned to Wordy
 - ⏳ **Sanctuary screen** — biggest remaining piece
