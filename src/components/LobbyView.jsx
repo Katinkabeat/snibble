@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
 import { useActivePet } from '../hooks/useActivePet.js'
+import { useStreak } from '../hooks/useStreak.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
@@ -23,6 +24,7 @@ const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 
 export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
   const { petInfo, loading: petLoading } = useActivePet(user.id)
+  const { streak } = useStreak(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
 
   useEffect(() => {
@@ -54,7 +56,17 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-display text-2xl text-wordy-800 truncate">{petInfo.name}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-2xl text-wordy-800 truncate">{petInfo.name}</h2>
+                  {streak > 0 && (
+                    <span
+                      className="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700 text-xs font-bold"
+                      title={`${streak}-day streak`}
+                    >
+                      Daily Streak 🔥 {streak}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-wordy-500 capitalize">
                   {petInfo.species} · {petInfo.stage}
                 </p>
@@ -103,9 +115,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
                 ) : (
                   <p className="text-sm text-wordy-500 italic mt-1">Loading today's puzzle…</p>
                 )}
-                <p className="text-[11px] text-wordy-500 mt-2 italic">
-                  Same puzzle for everyone today
-                </p>
               </div>
               <div className="btn-primary shrink-0 text-sm font-display">
                 Play →
