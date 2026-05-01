@@ -414,6 +414,7 @@ function WordListPanel({ title, words, highlightSet, highlightLabel }) {
 
 function RoundPlayPanel({ user, match, round, opponentName, totalRounds, completedRounds, onSubmitted }) {
   const matcher = useMemo(() => matcherFromBaseIds(round.base_rule_ids), [round.base_rule_ids])
+  const draftKey = `snibble:match:${match.id}:r${round.round_index}:u${user.id}:words`
   const [built, setBuilt] = useState([])
   const [trayLetters, setTrayLetters] = useState(() => [...round.letters])
   const [wordsFed, setWordsFed] = useState([])
@@ -422,12 +423,27 @@ function RoundPlayPanel({ user, match, round, opponentName, totalRounds, complet
   const [submitting, setSubmitting] = useState(false)
   const confirmTimerRef = useRef(null)
 
-  // Reset local state when the round changes (e.g. advancing in best-of-3).
+  // Hydrate from localStorage on mount AND when round changes (best-of-3
+  // advances) — survives tab close, navigating to lobby, etc. The draft
+  // is cleared on successful submit.
   useEffect(() => {
+    let saved = []
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) saved = JSON.parse(raw)
+    } catch {}
     setBuilt([])
     setTrayLetters([...round.letters])
-    setWordsFed([])
-  }, [round.match_id, round.round_index])
+    setWordsFed(Array.isArray(saved) ? saved : [])
+  }, [draftKey])
+
+  // Persist wordsFed to localStorage on every change.
+  useEffect(() => {
+    try {
+      if (wordsFed.length > 0) localStorage.setItem(draftKey, JSON.stringify(wordsFed))
+      else localStorage.removeItem(draftKey)
+    } catch {}
+  }, [draftKey, wordsFed])
 
   const fedCount = wordsFed.length
   const score = wordsFed.reduce((s, w) => s + scoreWord(w), 0)
@@ -502,6 +518,7 @@ function RoundPlayPanel({ user, match, round, opponentName, totalRounds, complet
       } else {
         toast.success('Locked in. Waiting on your opponent.')
       }
+      try { localStorage.removeItem(draftKey) } catch {}
       onSubmitted()
     } catch (err) {
       console.error('[submitMatchRound] failed', err)
