@@ -41,11 +41,13 @@ const MAX_SOLUTIONS = 30
 const MAX_REGENERATIONS = 50
 const TARGET_TRAY_SIZE = 7
 
-// Match mode tunables — wider bounds + bigger regen budget because
-// combined rules (two rules AND-ed) constrain the puzzle harder.
-const MATCH_MIN_SOLUTIONS = 15
-const MATCH_MAX_SOLUTIONS = 50
+// Match mode tunables — combined rules + 4-letter floor keep the
+// puzzle meatier than daily, so the cap is tighter (30, not 50) and
+// 2/3-letter words don't pad the count.
+const MATCH_MIN_SOLUTIONS = 12
+const MATCH_MAX_SOLUTIONS = 30
 const MATCH_MAX_REGENERATIONS = 200
+const MATCH_MIN_WORD_LENGTH = 4
 // Minimum common-word intersection size for a pair to count as
 // "viable" — below this, AND-ing the rules would produce too few
 // matches even before tray constraints.
@@ -229,10 +231,11 @@ export async function generateMatchPuzzle(seedString) {
   while (attempt < MATCH_MAX_REGENERATIONS) {
     attempt++
 
-    // 80% combined-rule pick, 20% single-rule (so matches feel mostly
-    // different from daily but the occasional single-rule round keeps
-    // things from feeling uniformly punishing).
-    const useCombined = rng.next() < 0.8 && viablePairs.length > 0
+    // Always combined-rule when a viable pair exists. Single-rule
+    // match rounds blew past the solution cap too often (they look
+    // identical to daily). Falling back to single only if the pair
+    // pool is empty (shouldn't happen in practice).
+    const useCombined = viablePairs.length > 0
 
     let baseIds, matcher, label, family
     if (useCombined) {
@@ -268,6 +271,7 @@ export async function generateMatchPuzzle(seedString) {
 
     const solutions = []
     for (const w of dictionary) {
+      if (w.length < MATCH_MIN_WORD_LENGTH) continue
       if (!commonSet.has(w)) continue
       if (!matcher(w)) continue
       if (!spellableFrom(w, rackSet)) continue
@@ -280,7 +284,7 @@ export async function generateMatchPuzzle(seedString) {
     solutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
     const totalSolutions = solutions.length
     const parCount = Math.ceil(totalSolutions * 0.6)
-    const difficulty = totalSolutions >= 35 ? 1 : totalSolutions >= 25 ? 2 : 3
+    const difficulty = totalSolutions >= 22 ? 1 : totalSolutions >= 17 ? 2 : 3
 
     return {
       seed: seedString,

@@ -447,7 +447,7 @@ function RoundPlayPanel({ user, match, round, opponentName, totalRounds, complet
   async function handleFeed() {
     if (busy) return
     const word = built.join('')
-    if (word.length < 3) return
+    if (word.length < 4) return
     setBusy(true)
     try {
       if (wordsFed.includes(word)) {

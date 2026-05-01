@@ -14,14 +14,46 @@
 // ────────────────────────────────────────────────────────────
 
 import toast from 'react-hot-toast'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMatches, useOpenMatches } from '../hooks/useMatches.js'
 import { joinMatch } from '../lib/matchActions.js'
+import { supabase } from '../lib/supabase.js'
 
 export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
   const mine = useMatches(user.id)
   const others = useOpenMatches(user.id)
   const [joiningId, setJoiningId] = useState(null)
+  const [cancellingId, setCancellingId] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return
+    let active = true
+    supabase
+      .from('admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => active && setIsAdmin(!!data))
+    return () => { active = false }
+  }, [user?.id])
+
+  async function handleCancel(match) {
+    if (cancellingId) return
+    if (!window.confirm('Delete this match? This cannot be undone.')) return
+    setCancellingId(match.id)
+    try {
+      const { error } = await supabase.from('sn_matches').delete().eq('id', match.id)
+      if (error) throw error
+      toast.success('Match deleted.')
+      mine.reload?.()
+      others.reload?.()
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete match')
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   const loading = mine.loading || others.loading
   const totalRows =
@@ -87,6 +119,9 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 action="Resume"
                 onAction={() => onOpenMatch(m)}
                 statusText="⏳ Waiting for opponent"
+                showAdminCancel={isAdmin}
+                cancelling={cancellingId === m.id}
+                onAdminCancel={() => handleCancel(m)}
               />
             ))}
 
@@ -101,6 +136,9 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 onAction={() => handleJoin(m)}
                 disabled={joiningId === m.id}
                 statusText="⏳ Waiting for opponent"
+                showAdminCancel={isAdmin}
+                cancelling={cancellingId === m.id}
+                onAdminCancel={() => handleCancel(m)}
               />
             ))}
 
@@ -116,6 +154,9 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 action="Play"
                 onAction={() => onOpenMatch(m)}
                 statusText={`🟢 Your turn · ${timeAgo(m.last_activity_at)}`}
+                showAdminCancel={isAdmin}
+                cancelling={cancellingId === m.id}
+                onAdminCancel={() => handleCancel(m)}
               />
             ))}
 
@@ -131,6 +172,9 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 action="View"
                 onAction={() => onOpenMatch(m)}
                 statusText={`⏳ Waiting on ${m.opponent?.username ?? 'them'} · ${timeAgo(m.last_activity_at)}`}
+                showAdminCancel={isAdmin}
+                cancelling={cancellingId === m.id}
+                onAdminCancel={() => handleCancel(m)}
               />
             ))}
 
@@ -175,6 +219,9 @@ function MatchRow({
   onAction,
   disabled,
   statusText,
+  showAdminCancel,
+  cancelling,
+  onAdminCancel,
 }) {
   const formatLabel = format === 'best_of_3' ? 'Best of 3' : 'Single'
   return (
@@ -199,13 +246,25 @@ function MatchRow({
           {formatLabel} · {statusText}
         </p>
       </div>
-      <button
-        onClick={onAction}
-        disabled={disabled}
-        className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 min-w-[5rem] btn-primary disabled:opacity-50"
-      >
-        {action}
-      </button>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {showAdminCancel && (
+          <button
+            onClick={onAdminCancel}
+            disabled={cancelling}
+            title="Admin: delete this match"
+            className="text-xs px-2 py-1.5 rounded-lg font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors disabled:opacity-50"
+          >
+            {cancelling ? '…' : '🗑'}
+          </button>
+        )}
+        <button
+          onClick={onAction}
+          disabled={disabled}
+          className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all min-w-[5rem] btn-primary disabled:opacity-50"
+        >
+          {action}
+        </button>
+      </div>
     </div>
   )
 }
