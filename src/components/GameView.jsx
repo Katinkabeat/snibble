@@ -22,12 +22,8 @@ import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import StatsModal from './StatsModal.jsx'
-import Mossy from './pets/Mossy.jsx'
-import Pip from './pets/Pip.jsx'
-import Mochi from './pets/Mochi.jsx'
+import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
-
-const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 const MILESTONE_MARKS = [5, 10, 25, 50] // word-count milestones for toasts
 
 export default function GameView({ user, onBack }) {
@@ -197,7 +193,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
     setShowStats(true)
   }
 
-  const PetComponent = PET_COMPONENTS[petInfo.petId] ?? Mossy
+  const PetComponent = PET_COMPONENTS[petInfo.petId] ?? PET_COMPONENTS.mossy
 
   return (
     <>

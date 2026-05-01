@@ -6,11 +6,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
-import Mossy from './pets/Mossy.jsx'
-import Pip from './pets/Pip.jsx'
-import Mochi from './pets/Mochi.jsx'
-
-const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
+import { PET_COMPONENTS } from '../lib/pets.jsx'
 
 function deriveStage(growth) {
   if (growth >= 21) return 'adult'

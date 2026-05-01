@@ -4,3 +4,6 @@ dist
 .DS_Store
 *.local
 supabase/.temp/
+
+# Pet art source files — kept locally for re-processing, not shipped
+public/pets/originals/

@@ -17,12 +17,8 @@ import { useStreak } from '../hooks/useStreak.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import MultiplayerCard from './MultiplayerCard.jsx'
 import CreateMatchSheet from './CreateMatchSheet.jsx'
-import Mossy from './pets/Mossy.jsx'
-import Pip from './pets/Pip.jsx'
-import Mochi from './pets/Mochi.jsx'
+import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
-
-const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 
 export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMatch }) {
   const { petInfo, loading: petLoading } = useActivePet(user.id)
@@ -39,7 +35,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
     return () => { active = false }
   }, [])
 
-  const PetComponent = petInfo ? (PET_COMPONENTS[petInfo.petId] ?? Mossy) : null
+  const PetComponent = petInfo ? (PET_COMPONENTS[petInfo.petId] ?? PET_COMPONENTS.mossy) : null
 
   return (
     <SQLobbyShell header={<SnibbleHeader user={user} />}>
