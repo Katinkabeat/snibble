@@ -1,14 +1,18 @@
 // ────────────────────────────────────────────────────────────
-//  MatchView — single-round async head-to-head match screen.
+//  MatchView — async head-to-head match screen.
 //
-//  State branches:
-//    open            : waiting for opponent (cancel + share later)
-//    in_progress, you owe a play  → round-play UI
-//    in_progress, you submitted   → waiting on them
-//    completed        : final scoreboard with both word lists
+//  Supports both single round and best-of-3. Best-of-3 reveals one
+//  craving at a time: round N+1 unlocks for a player only after they
+//  submit round N. Per-round results show as soon as BOTH players
+//  have submitted that round.
 //
-//  Best-of-3 will be added in chunk 2; this view handles round 0
-//  only for now.
+//  Branches:
+//    open                : waiting for opponent
+//    in_progress, your turn (round N) : round-play UI for round N
+//    in_progress, you submitted round N, more rounds left : "ready
+//                                          for round N+1" prompt
+//    in_progress, you finished all rounds, opponent hasn't : waiting
+//    completed            : full scoreboard, round-by-round breakdown
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -22,9 +26,8 @@ import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq
 
 export default function MatchView({ user, matchId, onBack }) {
   const [match, setMatch] = useState(null)
-  const [round, setRound] = useState(null)
-  const [myPlay, setMyPlay] = useState(null)        // your submitted play (if any)
-  const [theirPlay, setTheirPlay] = useState(null)   // opponent's play (visible after both submit)
+  const [rounds, setRounds] = useState([])
+  const [plays, setPlays] = useState([])  // all plays (mine + theirs, all rounds)
   const [opponent, setOpponent] = useState(null)
   const [creator, setCreator] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -36,39 +39,28 @@ export default function MatchView({ user, matchId, onBack }) {
     async function load() {
       setLoading(true)
       try {
-        const { data: m, error: mErr } = await supabase
-          .from('sn_matches')
-          .select('*')
-          .eq('id', matchId)
-          .single()
+        const [
+          { data: m, error: mErr },
+          { data: rRows, error: rErr },
+          { data: pRows, error: pErr },
+        ] = await Promise.all([
+          supabase.from('sn_matches').select('*').eq('id', matchId).single(),
+          supabase.from('sn_match_rounds').select('*').eq('match_id', matchId).order('round_index', { ascending: true }),
+          supabase.from('sn_match_round_plays').select('*').eq('match_id', matchId),
+        ])
         if (mErr) throw mErr
-
-        const { data: rounds, error: rErr } = await supabase
-          .from('sn_match_rounds')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('round_index', { ascending: true })
         if (rErr) throw rErr
-
-        const { data: plays, error: pErr } = await supabase
-          .from('sn_match_round_plays')
-          .select('*')
-          .eq('match_id', matchId)
-          .eq('round_index', 0)
         if (pErr) throw pErr
 
         const userIds = [m.creator_id, m.opponent_id].filter(Boolean)
         const { data: profileRows } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_hue')
-          .in('id', userIds)
+          .from('profiles').select('id, username, avatar_hue').in('id', userIds)
         const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]))
 
         if (!active) return
         setMatch(m)
-        setRound(rounds?.[0] ?? null)
-        setMyPlay((plays ?? []).find((p) => p.user_id === user.id) ?? null)
-        setTheirPlay((plays ?? []).find((p) => p.user_id !== user.id) ?? null)
+        setRounds(rRows ?? [])
+        setPlays(pRows ?? [])
         setCreator(profileById.get(m.creator_id) ?? null)
         setOpponent(m.opponent_id ? profileById.get(m.opponent_id) ?? null : null)
         setError(null)
@@ -88,6 +80,19 @@ export default function MatchView({ user, matchId, onBack }) {
   const otherProfile = match
     ? (match.creator_id === user.id ? opponent : creator)
     : null
+  const opponentName = otherProfile?.username ?? 'opponent'
+
+  // Per-round play lookups
+  const myPlays = plays.filter((p) => p.user_id === user.id)
+  const theirPlays = plays.filter((p) => p.user_id !== user.id)
+  const myRoundsDone = myPlays.length
+  const theirRoundsDone = theirPlays.length
+  const totalRounds = rounds.length
+
+  // Current round-to-play = the next round_index without my submission.
+  const currentRound = rounds.find(
+    (r) => !myPlays.some((p) => p.round_index === r.round_index)
+  )
 
   return (
     <SQBoardShell
@@ -100,25 +105,27 @@ export default function MatchView({ user, matchId, onBack }) {
 
       {!loading && !error && match && (
         <>
-          {match.status === 'open' && (
-            <OpenMatchPanel match={match} onBack={onBack} />
-          )}
+          {match.status === 'open' && <OpenMatchPanel match={match} />}
 
-          {match.status === 'in_progress' && !myPlay && round && (
+          {match.status === 'in_progress' && currentRound && (
             <RoundPlayPanel
               user={user}
               match={match}
-              round={round}
-              opponentName={otherProfile?.username ?? 'opponent'}
+              round={currentRound}
+              opponentName={opponentName}
+              totalRounds={totalRounds}
+              completedRounds={resolvedRounds(rounds, myPlays, theirPlays, user.id)}
               onSubmitted={refresh}
             />
           )}
 
-          {match.status === 'in_progress' && myPlay && !theirPlay && (
-            <WaitingPanel
-              opponentName={otherProfile?.username ?? 'opponent'}
-              myPlay={myPlay}
-              round={round}
+          {match.status === 'in_progress' && !currentRound && (
+            <WaitingForOpponentPanel
+              opponentName={opponentName}
+              myPlays={myPlays}
+              theirPlays={theirPlays}
+              rounds={rounds}
+              userId={user.id}
             />
           )}
 
@@ -126,10 +133,10 @@ export default function MatchView({ user, matchId, onBack }) {
             <CompletedPanel
               user={user}
               match={match}
-              round={round}
-              myPlay={myPlay}
-              theirPlay={theirPlay}
-              opponentName={otherProfile?.username ?? 'opponent'}
+              rounds={rounds}
+              myPlays={myPlays}
+              theirPlays={theirPlays}
+              opponentName={opponentName}
             />
           )}
         </>
@@ -138,17 +145,31 @@ export default function MatchView({ user, matchId, onBack }) {
   )
 }
 
+// ───────── Helpers ─────────
+
+// Returns an array of resolved-round summaries for display:
+// { roundIndex, mine, theirs, mineWon, totalSolutions }
+function resolvedRounds(rounds, myPlays, theirPlays, userId) {
+  const out = []
+  for (const round of rounds) {
+    const mine = myPlays.find((p) => p.round_index === round.round_index)
+    const theirs = theirPlays.find((p) => p.round_index === round.round_index)
+    if (!mine || !theirs) continue  // not yet resolved
+    const mineWon = mine.score > theirs.score
+    out.push({ roundIndex: round.round_index, mine, theirs, mineWon, totalSolutions: round.total_solutions })
+  }
+  return out
+}
+
 // ───────── Panels ─────────
 
 function OpenMatchPanel({ match }) {
   return (
     <div className="card p-6 text-center">
       <p className="text-4xl mb-3">🪧</p>
-      <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">
-        Match posted
-      </p>
+      <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">Match posted</p>
       <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">
-        Waiting for someone to join. They'll appear in their lobby's "open matches" browser.
+        Waiting for someone to join from their lobby's match list.
       </p>
       <p className="text-xs text-wordy-500 mt-3 italic">
         {match.format === 'best_of_3' ? 'Best of 3' : 'Single round'}
@@ -157,38 +178,72 @@ function OpenMatchPanel({ match }) {
   )
 }
 
-function WaitingPanel({ opponentName, myPlay, round }) {
-  const percent = round?.total_solutions
-    ? Math.round((myPlay.words_fed.length / round.total_solutions) * 100)
-    : 0
+function WaitingForOpponentPanel({ opponentName, myPlays, theirPlays, rounds, userId }) {
+  const totalRounds = rounds.length
   return (
-    <div className="card p-6 text-center">
-      <p className="text-4xl mb-3">⏳</p>
-      <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">
-        Waiting on {opponentName}
-      </p>
-      <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">
-        Your round is locked in.
-      </p>
-      <div className="mt-4 inline-block px-3 py-1.5 rounded-full bg-wordy-100 text-wordy-700 text-sm font-bold">
-        {myPlay.score} pts · {percent}%
+    <div className="space-y-3">
+      <div className="card p-6 text-center">
+        <p className="text-4xl mb-3">⏳</p>
+        <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">
+          Waiting on {opponentName}
+        </p>
+        <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">
+          {totalRounds === 1
+            ? 'Your round is locked in.'
+            : `You've finished all ${totalRounds} rounds.`}
+        </p>
       </div>
+      <RoundsSummary
+        rounds={rounds}
+        myPlays={myPlays}
+        theirPlays={theirPlays}
+        opponentName={opponentName}
+      />
     </div>
   )
 }
 
-function CompletedPanel({ user, match, round, myPlay, theirPlay, opponentName }) {
+function RoundsSummary({ rounds, myPlays, theirPlays, opponentName }) {
+  if (rounds.length <= 1) return null
+  return (
+    <div className="card p-4">
+      <h3 className="font-display text-sm uppercase tracking-wide text-wordy-500 mb-2">
+        Rounds
+      </h3>
+      <ul className="space-y-1.5">
+        {rounds.map((round) => {
+          const mine = myPlays.find((p) => p.round_index === round.round_index)
+          const theirs = theirPlays.find((p) => p.round_index === round.round_index)
+          const resolved = mine && theirs
+          return (
+            <li
+              key={round.round_index}
+              className="flex items-center justify-between px-3 py-2 rounded-xl bg-wordy-50 dark:bg-[#221540]"
+            >
+              <span className="text-xs font-bold text-wordy-700 dark:text-wordy-200">
+                Round {round.round_index + 1}
+              </span>
+              <span className="text-xs text-wordy-600 dark:text-wordy-300">
+                {resolved
+                  ? `You ${mine.score} · ${opponentName} ${theirs.score}`
+                  : mine
+                    ? `You ${mine.score} · waiting on ${opponentName}`
+                    : 'Locked'}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName }) {
   const youWon = match.winner_id === user.id
   const tied = !match.winner_id
-  const ranked = [
-    { label: 'You', play: myPlay, isYou: true },
-    { label: opponentName, play: theirPlay, isYou: false },
-  ].sort((a, b) => (b.play?.score ?? 0) - (a.play?.score ?? 0))
 
-  const myWords = [...(myPlay?.words_fed ?? [])].sort((a, b) => a.localeCompare(b))
-  const theirWords = [...(theirPlay?.words_fed ?? [])].sort((a, b) => a.localeCompare(b))
-  const myWordSet = new Set(myWords)
-  const theirWordSet = new Set(theirWords)
+  const myTotal = myPlays.reduce((s, p) => s + p.score, 0)
+  const theirTotal = theirPlays.reduce((s, p) => s + p.score, 0)
 
   return (
     <div className="space-y-4">
@@ -197,38 +252,61 @@ function CompletedPanel({ user, match, round, myPlay, theirPlay, opponentName })
         <p className="font-display text-2xl text-wordy-800 dark:text-wordy-100">
           {youWon ? 'You won!' : tied ? 'A tie!' : `${opponentName} won.`}
         </p>
+        <p className="mt-2 text-sm text-wordy-600 dark:text-wordy-300">
+          Total: <span className="font-bold">{myTotal}</span> · {opponentName} <span className="font-bold">{theirTotal}</span>
+        </p>
       </div>
 
-      <div className="card p-4">
-        <h3 className="font-display text-sm uppercase tracking-wide text-wordy-500 mb-3">
-          Final scores
-        </h3>
-        <ul className="space-y-1.5">
-          {ranked.map(({ label, play, isYou }) => {
-            const percent = round?.total_solutions
-              ? Math.round(((play?.words_fed?.length ?? 0) / round.total_solutions) * 100)
-              : 0
-            return (
-              <li
-                key={label}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl ${
-                  isYou
-                    ? 'bg-gradient-to-r from-wordy-100 to-pink-50 ring-2 ring-wordy-400'
-                    : 'bg-wordy-50'
-                }`}
-              >
-                <span className="font-bold text-wordy-800 dark:text-wordy-100">{label}</span>
-                <span className="font-display text-wordy-800 dark:text-wordy-100">
-                  {play?.score ?? 0} pts <span className="text-wordy-500 font-normal">· {percent}%</span>
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
+      {rounds.length > 1 && (
+        <div className="card p-4">
+          <h3 className="font-display text-sm uppercase tracking-wide text-wordy-500 mb-3">
+            Round-by-round
+          </h3>
+          <ul className="space-y-1.5">
+            {rounds.map((round) => {
+              const mine = myPlays.find((p) => p.round_index === round.round_index)
+              const theirs = theirPlays.find((p) => p.round_index === round.round_index)
+              const mineWon = mine && theirs && mine.score > theirs.score
+              const tiedRound = mine && theirs && mine.score === theirs.score
+              return (
+                <li
+                  key={round.round_index}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-wordy-50 dark:bg-[#221540]"
+                >
+                  <span className="text-xs font-bold text-wordy-700 dark:text-wordy-200">
+                    Round {round.round_index + 1}
+                  </span>
+                  <span className={`text-xs ${mineWon ? 'text-pink-700 dark:text-pink-300 font-bold' : 'text-wordy-600 dark:text-wordy-300'}`}>
+                    You {mine?.score ?? 0} · {opponentName} {theirs?.score ?? 0}
+                    {mineWon && ' ★'}
+                    {tiedRound && ' ='}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
-      <WordListPanel title="Your words" words={myWords} highlightSet={theirWordSet} highlightLabel="they got too" />
-      <WordListPanel title={`${opponentName}'s words`} words={theirWords} highlightSet={myWordSet} highlightLabel="you got too" />
+      {rounds.map((round) => {
+        const mine = myPlays.find((p) => p.round_index === round.round_index)
+        const theirs = theirPlays.find((p) => p.round_index === round.round_index)
+        const myWords = [...(mine?.words_fed ?? [])].sort((a, b) => a.localeCompare(b))
+        const theirWords = [...(theirs?.words_fed ?? [])].sort((a, b) => a.localeCompare(b))
+        const myWordSet = new Set(myWords)
+        const theirWordSet = new Set(theirWords)
+        return (
+          <div key={round.round_index} className="space-y-3">
+            {rounds.length > 1 && (
+              <h3 className="font-display text-sm uppercase tracking-wide text-wordy-500 px-1">
+                Round {round.round_index + 1} words
+              </h3>
+            )}
+            <WordListPanel title="Your words" words={myWords} highlightSet={theirWordSet} highlightLabel="they got too" />
+            <WordListPanel title={`${opponentName}'s words`} words={theirWords} highlightSet={myWordSet} highlightLabel="you got too" />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -238,9 +316,7 @@ function WordListPanel({ title, words, highlightSet, highlightLabel }) {
   return (
     <div className="card p-4">
       <h3 className="font-display text-sm uppercase tracking-wide text-wordy-500 mb-2">{title}</h3>
-      <p className="text-[11px] text-wordy-500 mb-2">
-        Highlighted = {highlightLabel}.
-      </p>
+      <p className="text-[11px] text-wordy-500 mb-2">Highlighted = {highlightLabel}.</p>
       <div className="flex flex-wrap gap-1.5">
         {words.map((w) => {
           const shared = highlightSet?.has(w)
@@ -264,7 +340,7 @@ function WordListPanel({ title, words, highlightSet, highlightLabel }) {
 
 // ───────── Round play UI ─────────
 
-function RoundPlayPanel({ user, match, round, opponentName, onSubmitted }) {
+function RoundPlayPanel({ user, match, round, opponentName, totalRounds, completedRounds, onSubmitted }) {
   const matcher = useMemo(() => matcherFromBaseIds(round.base_rule_ids), [round.base_rule_ids])
   const [built, setBuilt] = useState([])
   const [trayLetters, setTrayLetters] = useState(() => [...round.letters])
@@ -273,6 +349,13 @@ function RoundPlayPanel({ user, match, round, opponentName, onSubmitted }) {
   const [confirmingDone, setConfirmingDone] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const confirmTimerRef = useRef(null)
+
+  // Reset local state when the round changes (e.g. advancing in best-of-3).
+  useEffect(() => {
+    setBuilt([])
+    setTrayLetters([...round.letters])
+    setWordsFed([])
+  }, [round.match_id, round.round_index])
 
   const fedCount = wordsFed.length
   const score = wordsFed.reduce((s, w) => s + scoreWord(w), 0)
@@ -339,6 +422,8 @@ function RoundPlayPanel({ user, match, round, opponentName, onSubmitted }) {
       })
       if (result.complete) {
         toast.success('Match complete — opening results.')
+      } else if (round.round_index + 1 < totalRounds) {
+        toast.success(`Round ${round.round_index + 1} locked in. Next round ready.`)
       } else {
         toast.success('Locked in. Waiting on your opponent.')
       }
@@ -355,9 +440,26 @@ function RoundPlayPanel({ user, match, round, opponentName, onSubmitted }) {
     <>
       <div className="mb-2 text-center">
         <p className="text-xs text-wordy-500 font-bold uppercase tracking-wide">
-          vs. {opponentName} · Round {round.round_index + 1}
+          vs. {opponentName} {totalRounds > 1 && `· Round ${round.round_index + 1} of ${totalRounds}`}
         </p>
       </div>
+
+      {/* Resolved earlier rounds (in best-of-3) appear above the current craving. */}
+      {completedRounds.length > 0 && (
+        <div className="card p-3 mb-3">
+          <ul className="space-y-1">
+            {completedRounds.map((r) => (
+              <li key={r.roundIndex} className="flex items-center justify-between text-xs">
+                <span className="text-wordy-600 dark:text-wordy-300">Round {r.roundIndex + 1}</span>
+                <span className={r.mineWon ? 'text-pink-700 dark:text-pink-300 font-bold' : 'text-wordy-600 dark:text-wordy-300'}>
+                  You {r.mine.score} · {opponentName} {r.theirs.score}
+                  {r.mineWon && ' ★'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mb-3 bg-gradient-to-br from-amber-200 to-amber-400 text-amber-900 border border-amber-500 rounded-2xl px-4 py-2 text-center shadow-tile">
         <p className="font-display text-base leading-tight">
@@ -365,7 +467,7 @@ function RoundPlayPanel({ user, match, round, opponentName, onSubmitted }) {
         </p>
       </div>
 
-      {/* Fullness/progress bar (no pet in match mode) */}
+      {/* Progress / score readout */}
       <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-2">
         <div className="flex items-center justify-between mb-2 text-xs text-wordy-600">
           <span className="font-bold">{fedCount} of {round.total_solutions} fed</span>

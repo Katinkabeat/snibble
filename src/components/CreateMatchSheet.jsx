@@ -81,18 +81,13 @@ export default function CreateMatchSheet({ user, onClose, onCreated }) {
           </button>
 
           <button
-            disabled
-            className="w-full card p-4 text-left opacity-60 cursor-not-allowed"
-            aria-disabled="true"
+            onClick={() => handleCreate('best_of_3')}
+            disabled={submitting}
+            className="w-full card p-4 text-left hover:shadow-tile-hover transition-shadow disabled:opacity-60"
           >
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-display text-base text-wordy-800 dark:text-wordy-100">Best of 3</p>
-              <span className="text-[10px] uppercase tracking-wide font-bold px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700">
-                Soon
-              </span>
-            </div>
+            <p className="font-display text-base text-wordy-800 dark:text-wordy-100">Best of 3</p>
             <p className="text-xs text-wordy-600 dark:text-wordy-300 mt-0.5">
-              Three cravings. Highest total wins.
+              Three cravings revealed one at a time. Highest total wins.
             </p>
           </button>
         </div>
