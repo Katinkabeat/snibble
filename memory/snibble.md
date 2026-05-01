@@ -278,12 +278,38 @@ The `sn_app_settings` table + the RPC live in
 - ⏳ Pip + Mochi adolescent/adult stages — not urgent (no tester
   reaches them for 31+ days)
 
-**v2 (after first testers):**
-- In-game leaderboard
-- Async head-to-head matches (single round + best-of-3)
-- Pets 4–6
-- Streak counter
-- Pet stages 2/3 for Pip + Mochi
+**v2 — shipped 2026-04-30 to 2026-05-01:**
+- ✅ Daily leaderboard + StatsModal (avatar menu → 📊 Stats)
+  - Two tabs: 🏆 Today (gated until you submit) and 📊 My Stats
+  - Leaderboard rows expand independently to show word lists, sorted
+    A–Z so you can scan for words you missed
+  - End-of-session auto-pops the leaderboard with your row highlighted
+- ✅ Streak counter on lobby pet card (purple `Daily Streak 🔥 N` pill,
+  right-aligned to match progress bar; uses Wordy's player-pill style)
+- ✅ Async head-to-head matches (1v1 — Rae locked in cozier than 3+):
+  - sn_matches / sn_match_rounds / sn_match_round_plays tables
+  - Combined-rule cravings (~80% combined, 20% single) on a 7-letter
+    tray; smart rule-pairing precompute caches viable AND-able pairs
+  - Single round + best-of-3 (one craving revealed at a time per
+    player; resolves per-round once both submit)
+  - Lobby multiplayer card mirrors Rungles — Start a match button +
+    unified list (open by anyone, your turn, waiting on them, recent
+    completed). "N your turn" badge on the section header.
+  - Rematch button on completed match (posts a new public match in
+    the same format)
+  - 7-day claim-win for stalled matches
+  - Push notifications: opponent_joined + round_submitted triggers →
+    snibble-push-notification Edge Function. Subscription fallback
+    ['sidequest', 'snibble']; SQ hub opt-in covers most users.
+    Edge Function counts plays directly to detect match-completion
+    (since match.status updates after the play insert and the
+    function may run before that).
+
+**v2 still pending:**
+- ⏳ Pets 4–6 (Burrow, Bramble, Honey) art — only Mossy/Pip/Mochi
+  have SVGs; the other 10 in sn_pets show placeholder × on cards.
+  Not urgent because no tester graduates a pet for 30+ days.
+- ⏳ Pet stages 2/3 for Pip + Mochi — same reason.
 
 **v3:**
 - Pets 7–13 (full year roster)
