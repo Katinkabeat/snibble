@@ -91,39 +91,29 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         )}
 
         {/* Daily mode card */}
-        <section>
-          <h2 className="font-display text-xl text-wordy-700 mb-2 px-1">🌅 Today's Snibble</h2>
-          <button
-            onClick={onPlayDaily}
-            className="w-full card p-5 text-left hover:shadow-tile-hover transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-display text-lg text-wordy-800">Daily craving</p>
-                  {puzzleTeaser && (
-                    <span
-                      className="text-xs"
-                      title={`${puzzleTeaser.difficulty === 1 ? 'easy' : puzzleTeaser.difficulty === 2 ? 'medium' : 'hard'} day`}
-                    >
-                      <span className="text-amber-600">{'★'.repeat(puzzleTeaser.difficulty)}</span>
-                      <span className="text-amber-200">{'★'.repeat(3 - puzzleTeaser.difficulty)}</span>
-                    </span>
-                  )}
-                </div>
-                {puzzleTeaser ? (
-                  <p className="text-sm text-wordy-600 mt-1">
-                    {petInfo?.name ?? 'Your pet'} wants{' '}
-                    <span className="font-bold text-wordy-800">{puzzleTeaser.base.label}</span> today.
-                  </p>
-                ) : (
-                  <p className="text-sm text-wordy-500 italic mt-1">Loading today's puzzle…</p>
-                )}
-              </div>
-              <div className="btn-primary shrink-0 text-sm font-display">
-                Play →
-              </div>
-            </div>
+        <section className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="font-display text-xl text-wordy-700">🌅 Today's Snibble</h2>
+            {puzzleTeaser && (
+              <span
+                className="text-xs"
+                title={`${puzzleTeaser.difficulty === 1 ? 'easy' : puzzleTeaser.difficulty === 2 ? 'medium' : 'hard'} day`}
+              >
+                <span className="text-amber-600">{'★'.repeat(puzzleTeaser.difficulty)}</span>
+                <span className="text-amber-200">{'★'.repeat(3 - puzzleTeaser.difficulty)}</span>
+              </span>
+            )}
+          </div>
+          {puzzleTeaser ? (
+            <p className="text-sm text-wordy-600 mb-3">
+              {petInfo?.name ?? 'Your pet'} wants{' '}
+              <span className="font-bold text-wordy-800">{puzzleTeaser.base.label}</span> today.
+            </p>
+          ) : (
+            <p className="text-sm text-wordy-500 italic mb-3">Loading today's puzzle…</p>
+          )}
+          <button onClick={onPlayDaily} className="btn-primary text-sm font-display">
+            ▶ Play
           </button>
         </section>
 
@@ -135,21 +125,13 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         />
 
         {/* Sanctuary — Pokemon-style pet collection */}
-        <section>
-          <h2 className="font-display text-xl text-wordy-700 mb-2 px-1">🌿 Sanctuary</h2>
-          <button
-            onClick={onOpenSanctuary}
-            className="w-full card p-5 text-left hover:shadow-tile-hover transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-display text-lg text-wordy-800">Your collection</p>
-                <p className="text-sm text-wordy-600 mt-1">
-                  Meet the pets you've raised — and a few who haven't shown themselves yet.
-                </p>
-              </div>
-              <div className="btn-secondary shrink-0 text-sm font-display">Open →</div>
-            </div>
+        <section className="card">
+          <h2 className="font-display text-xl text-wordy-700 mb-1">🌿 Sanctuary</h2>
+          <p className="text-sm text-wordy-600 mb-3">
+            Meet the pets you've raised — and a few who haven't shown themselves yet.
+          </p>
+          <button onClick={onOpenSanctuary} className="btn-secondary text-sm font-display">
+            Open →
           </button>
         </section>
       {showCreateMatch && (

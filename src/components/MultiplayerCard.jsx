@@ -8,6 +8,9 @@
 //    3. Your turn
 //    4. Waiting on them
 //    5. Recent completed
+//
+//  Row layout matches Wordy/Rungles exactly: white-ish row card with
+//  player chips, format/status sub-text, action button on the right.
 // ────────────────────────────────────────────────────────────
 
 import toast from 'react-hot-toast'
@@ -45,20 +48,21 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
   }
 
   return (
-    <section>
-      <h2 className="font-display text-xl text-wordy-700 mb-2 px-1 flex items-center gap-2">
-        🎮 Two-Player Match
+    <section className="card">
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-display text-xl text-wordy-700">🎮 Two-Player Match</h2>
         {mine.yourTurn.length > 0 && (
           <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-pink-200 text-pink-700 ring-1 ring-pink-300">
             {mine.yourTurn.length} your turn
           </span>
         )}
-      </h2>
-
-      <div className="card p-4">
-        <button onClick={onCreateMatch} className="btn-primary w-full text-sm font-display mb-3">
-          ✨ Start a match
-        </button>
+      </div>
+      <p className="text-sm text-wordy-600 mb-3">
+        Same craving + same letters. Highest score wins.
+      </p>
+      <button onClick={onCreateMatch} className="btn-primary text-sm font-display mb-3">
+        ✨ Start a match
+      </button>
 
         {loading && (
           <p className="text-xs text-wordy-500 italic text-center py-2">Loading matches…</p>
@@ -72,92 +76,166 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
 
         {!loading && (
           <div className="space-y-1.5">
-            {/* Yours, awaiting opponent */}
             {mine.waitingForOpponent.map((m) => (
               <MatchRow
                 key={m.id}
-                match={m}
-                status="waiting-for-opponent"
-                onClick={() => onOpenMatch(m)}
+                kind="waiting-for-opponent"
+                userName={user.userMetadata?.username}
+                creatorName={user.user_metadata?.username ?? 'You'}
+                opponentName={null}
+                format={m.format}
+                action="Resume"
+                onAction={() => onOpenMatch(m)}
+                statusText="⏳ Waiting for opponent"
               />
             ))}
 
-            {/* Others' open matches — joinable */}
             {others.matches.map((m) => (
-              <button
+              <MatchRow
                 key={m.id}
+                kind="open-other"
+                creatorName={m.creator.username}
+                opponentName={null}
+                format={m.format}
+                action={joiningId === m.id ? 'Joining…' : 'Join'}
+                onAction={() => handleJoin(m)}
                 disabled={joiningId === m.id}
-                onClick={() => handleJoin(m)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-wordy-50 dark:bg-[#221540] hover:bg-wordy-100 dark:hover:bg-[#2d1b55] text-left transition-colors disabled:opacity-50"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-wordy-800 dark:text-wordy-100 truncate">
-                    {m.creator.username}
-                  </div>
-                  <div className="text-[11px] text-wordy-500">
-                    {m.format === 'best_of_3' ? 'Best of 3' : 'Single round'}
-                  </div>
-                </div>
-                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-pink-100 text-pink-700 ring-1 ring-pink-300">
-                  {joiningId === m.id ? 'Joining…' : 'Join →'}
-                </span>
-              </button>
+                statusText="⏳ Waiting for opponent"
+              />
             ))}
 
-            {/* Your turn */}
             {mine.yourTurn.map((m) => (
-              <MatchRow key={m.id} match={m} status="your-turn" onClick={() => onOpenMatch(m)} />
+              <MatchRow
+                key={m.id}
+                kind="your-turn"
+                creatorName={m.isCreator ? 'You' : (m.opponent?.username ?? '?')}
+                opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
+                youAreCreator={m.isCreator}
+                youHighlight
+                format={m.format}
+                action="Play"
+                onAction={() => onOpenMatch(m)}
+                statusText={`🟢 Your turn · ${timeAgo(m.last_activity_at)}`}
+              />
             ))}
 
-            {/* Waiting on them */}
             {mine.waitingOnThem.map((m) => (
-              <MatchRow key={m.id} match={m} status="waiting-on-them" onClick={() => onOpenMatch(m)} />
+              <MatchRow
+                key={m.id}
+                kind="waiting-on-them"
+                creatorName={m.isCreator ? 'You' : (m.opponent?.username ?? '?')}
+                opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
+                youAreCreator={m.isCreator}
+                themHighlight
+                format={m.format}
+                action="View"
+                onAction={() => onOpenMatch(m)}
+                statusText={`⏳ Waiting on ${m.opponent?.username ?? 'them'} · ${timeAgo(m.last_activity_at)}`}
+              />
             ))}
 
-            {/* Recent completed */}
             {mine.completed.slice(0, 5).map((m) => (
-              <MatchRow key={m.id} match={m} status="completed" onClick={() => onOpenMatch(m)} />
+              <MatchRow
+                key={m.id}
+                kind="completed"
+                creatorName={m.isCreator ? 'You' : (m.opponent?.username ?? '?')}
+                opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
+                youAreCreator={m.isCreator}
+                format={m.format}
+                action="Result"
+                onAction={() => onOpenMatch(m)}
+                statusText={
+                  m.youWon
+                    ? '🏆 You won'
+                    : m.winner_id
+                      ? '🌙 They won'
+                      : '🤝 Tied'
+                }
+              />
             ))}
           </div>
         )}
-      </div>
     </section>
   )
 }
 
-function MatchRow({ match, status, onClick }) {
-  const opponentName = match.opponent?.username ?? '???'
-  const formatLabel = match.format === 'best_of_3' ? 'Best of 3' : 'Single round'
-
-  let statusLabel, pillClass
-  if (status === 'waiting-for-opponent') {
-    statusLabel = 'Waiting for opponent'
-    pillClass = 'bg-wordy-100 text-wordy-700'
-  } else if (status === 'your-turn') {
-    statusLabel = 'Your turn'
-    pillClass = 'bg-pink-100 text-pink-700 ring-1 ring-pink-300'
-  } else if (status === 'waiting-on-them') {
-    statusLabel = 'Waiting on them'
-    pillClass = 'bg-wordy-100 text-wordy-500'
-  } else if (status === 'completed') {
-    statusLabel = match.youWon ? 'You won' : match.winner_id ? 'You lost' : 'Tie'
-    pillClass = match.youWon ? 'bg-amber-100 text-amber-700' : 'bg-wordy-100 text-wordy-500'
-  }
-
+// One lobby row — chip strip on the left, status under, action on right.
+// Classes copied verbatim from wordy/src/components/lobby/LobbyGameRow.jsx
+// so Snibble's lobby rows are visually identical to Wordy's. Dark-mode
+// overrides come from Wordy's index.css globals (per SQ conventions);
+// don't add `dark:` variants here.
+function MatchRow({
+  creatorName,
+  opponentName,
+  youAreCreator,
+  youHighlight,
+  themHighlight,
+  format,
+  action,
+  onAction,
+  disabled,
+  statusText,
+}) {
+  const formatLabel = format === 'best_of_3' ? 'Best of 3' : 'Single'
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left bg-wordy-50 dark:bg-[#221540] hover:bg-wordy-100 dark:hover:bg-[#2d1b55] transition-colors"
-    >
+    <div className="flex items-center justify-between bg-wordy-50 rounded-xl px-3 py-2 border border-wordy-100">
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold text-wordy-800 dark:text-wordy-100 truncate">
-          vs. {status === 'waiting-for-opponent' ? '???' : opponentName}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Chip
+            name={creatorName}
+            highlight={youAreCreator ? youHighlight : themHighlight}
+          />
+          <span className="text-xs text-wordy-400">vs</span>
+          {opponentName ? (
+            <Chip
+              name={opponentName}
+              highlight={youAreCreator ? themHighlight : youHighlight}
+            />
+          ) : (
+            <Chip name="?" muted />
+          )}
         </div>
-        <div className="text-[11px] text-wordy-500">{formatLabel}</div>
+        <p className="text-xs text-wordy-400 mt-0.5">
+          {formatLabel} · {statusText}
+        </p>
       </div>
-      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${pillClass}`}>
-        {statusLabel}
-      </span>
-    </button>
+      <button
+        onClick={onAction}
+        disabled={disabled}
+        className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 min-w-[5rem] btn-primary disabled:opacity-50"
+      >
+        {action}
+      </button>
+    </div>
   )
+}
+
+// Chip classes also lifted verbatim from Wordy's LobbyGameRow.
+function Chip({ name, highlight, muted }) {
+  return (
+    <span
+      className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+        highlight
+          ? 'text-white bg-wordy-500'
+          : muted
+            ? 'text-wordy-400 bg-wordy-100'
+            : 'text-wordy-700 bg-wordy-200'
+      }`}
+    >
+      {name}
+    </span>
+  )
+}
+
+// "Xh ago" style relative time. Matches Wordy's lobby row.
+function timeAgo(iso) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (days > 0) return `${days}d ago`
+  if (hours > 0) return `${hours}h ago`
+  if (mins > 0) return `${mins}m ago`
+  return 'just now'
 }

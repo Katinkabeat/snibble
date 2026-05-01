@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import toast from 'react-hot-toast'
+import HowToPlayModal from './HowToPlayModal.jsx'
 
 export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
   const { isDark, toggle: toggleTheme } = useTheme()
@@ -23,6 +24,7 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
   const [redoLoading, setRedoLoading] = useState(true)
   const [resettingLeaderboard, setResettingLeaderboard] = useState(false)
   const [redoingToday, setRedoingToday] = useState(false)
+  const [showHowToPlay, setShowHowToPlay] = useState(false)
 
   // Click outside / Escape to close.
   useEffect(() => {
@@ -130,15 +132,14 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
         </button>
       </div>
 
-      {/* How to play — placeholder until gameplay is settled. */}
+      {/* How to play — opens the HowToPlayModal. */}
       <div className="settings-row">
         <span className="text-sm font-bold text-wordy-600">How to play</span>
         <button
-          onClick={() => toast("Snibble's how-to lands once we're done iterating on gameplay.")}
-          className="text-sm font-bold text-wordy-400 cursor-not-allowed"
-          title="Coming soon"
+          onClick={() => setShowHowToPlay(true)}
+          className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
         >
-          ❓ <span className="text-[10px]">soon</span>
+          ❓ Open
         </button>
       </div>
 
@@ -199,6 +200,8 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
           Log out
         </button>
       </div>
+
+      {showHowToPlay && <HowToPlayModal onClose={() => setShowHowToPlay(false)} />}
     </div>
   )
 }
