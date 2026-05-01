@@ -4,6 +4,7 @@ import PetPreview from './components/PetPreview.jsx'
 import LobbyView from './components/LobbyView.jsx'
 import GameView from './components/GameView.jsx'
 import SanctuaryView from './components/SanctuaryView.jsx'
+import MatchView from './components/MatchView.jsx'
 import { preloadDictionary } from './lib/dictionary.js'
 
 // SQ hub URL — unauthed visitors get bounced here so the hub handles login.
@@ -78,11 +79,16 @@ export default function App() {
   if (queryParam('view') === 'sanctuary') {
     return <SanctuaryView user={session.user} onBack={() => goTo('')} />
   }
+  const matchId = queryParam('match')
+  if (matchId) {
+    return <MatchView user={session.user} matchId={matchId} onBack={() => goTo('')} />
+  }
   return (
     <LobbyView
       user={session.user}
       onPlayDaily={() => goTo('?play=daily')}
       onOpenSanctuary={() => goTo('?view=sanctuary')}
+      onOpenMatch={(id) => goTo(`?match=${id}`)}
     />
   )
 }

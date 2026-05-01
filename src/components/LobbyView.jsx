@@ -15,6 +15,8 @@ import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useStreak } from '../hooks/useStreak.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
+import MultiplayerCard from './MultiplayerCard.jsx'
+import CreateMatchSheet from './CreateMatchSheet.jsx'
 import Mossy from './pets/Mossy.jsx'
 import Pip from './pets/Pip.jsx'
 import Mochi from './pets/Mochi.jsx'
@@ -22,10 +24,12 @@ import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 const PET_COMPONENTS = { mossy: Mossy, pip: Pip, mochi: Mochi }
 
-export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
+export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMatch }) {
   const { petInfo, loading: petLoading } = useActivePet(user.id)
   const { streak } = useStreak(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
+  const [showCreateMatch, setShowCreateMatch] = useState(false)
+  const [matchesRefreshKey, setMatchesRefreshKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -123,26 +127,12 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
           </button>
         </section>
 
-        {/* Head-to-head match card — coming in v2 */}
-        <section>
-          <h2 className="font-display text-xl text-wordy-700 mb-2 px-1">🎮 Two-Player Match</h2>
-          <div className="card p-5 opacity-60 cursor-not-allowed" aria-disabled="true">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-display text-lg text-wordy-800">Head-to-head</p>
-                <p className="text-sm text-wordy-600 mt-1">
-                  Same craving + same letters. Highest score wins. No pets, just words.
-                </p>
-                <p className="text-[11px] text-wordy-500 mt-2 italic">
-                  Single round or best of 3 · async like Wordy
-                </p>
-              </div>
-              <div className="shrink-0 px-3 py-1.5 rounded-xl bg-wordy-200 text-wordy-700 text-xs font-display">
-                Coming soon
-              </div>
-            </div>
-          </div>
-        </section>
+        <MultiplayerCard
+          key={matchesRefreshKey}
+          user={user}
+          onCreateMatch={() => setShowCreateMatch(true)}
+          onOpenMatch={(m) => onOpenMatch(m.id)}
+        />
 
         {/* Sanctuary — Pokemon-style pet collection */}
         <section>
@@ -162,6 +152,16 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary }) {
             </div>
           </button>
         </section>
+      {showCreateMatch && (
+        <CreateMatchSheet
+          user={user}
+          onClose={() => setShowCreateMatch(false)}
+          onCreated={() => {
+            setShowCreateMatch(false)
+            setMatchesRefreshKey((k) => k + 1)
+          }}
+        />
+      )}
     </SQLobbyShell>
   )
 }
