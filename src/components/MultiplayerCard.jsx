@@ -46,7 +46,14 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
 
   return (
     <section>
-      <h2 className="font-display text-xl text-wordy-700 mb-2 px-1">🎮 Two-Player Match</h2>
+      <h2 className="font-display text-xl text-wordy-700 mb-2 px-1 flex items-center gap-2">
+        🎮 Two-Player Match
+        {mine.yourTurn.length > 0 && (
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-pink-200 text-pink-700 ring-1 ring-pink-300">
+            {mine.yourTurn.length} your turn
+          </span>
+        )}
+      </h2>
 
       <div className="card p-4">
         <button onClick={onCreateMatch} className="btn-primary w-full text-sm font-display mb-3">

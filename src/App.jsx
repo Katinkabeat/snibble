@@ -81,7 +81,14 @@ export default function App() {
   }
   const matchId = queryParam('match')
   if (matchId) {
-    return <MatchView user={session.user} matchId={matchId} onBack={() => goTo('')} />
+    return (
+      <MatchView
+        user={session.user}
+        matchId={matchId}
+        onBack={() => goTo('')}
+        onOpenMatch={(id) => goTo(`?match=${id}`)}
+      />
+    )
   }
   return (
     <LobbyView

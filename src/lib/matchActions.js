@@ -174,6 +174,31 @@ export async function submitMatchRound({ matchId, roundIndex, userId, wordsFed }
 }
 
 /**
+ * Claim a stalled match. Allowed when last_activity_at is older than
+ * 7 days (enforced client-side; server check is best-effort via the
+ * status='in_progress' filter on the update). Sets winner = caller,
+ * status = 'completed', completed_at = now.
+ */
+export async function claimMatchWin({ matchId, userId }) {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('sn_matches')
+    .update({
+      status: 'completed',
+      winner_id: userId,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', matchId)
+    .eq('status', 'in_progress')
+    .lte('last_activity_at', sevenDaysAgo)
+    .select()
+    .single()
+  if (error) throw error
+  if (!data) throw new Error('Match not eligible to claim — opponent may have submitted recently.')
+  return data
+}
+
+/**
  * Reconstruct a rule matcher from base_rule_ids stored on the round.
  * Single id → that rule. Two ids → AND-combined.
  */

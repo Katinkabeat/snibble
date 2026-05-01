@@ -19,12 +19,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase.js'
 import { isCommonWord } from '../lib/dictionary.js'
-import { matcherFromBaseIds, submitMatchRound } from '../lib/matchActions.js'
+import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin } from '../lib/matchActions.js'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
-export default function MatchView({ user, matchId, onBack }) {
+export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [match, setMatch] = useState(null)
   const [rounds, setRounds] = useState([])
   const [plays, setPlays] = useState([])  // all plays (mine + theirs, all rounds)
@@ -121,11 +121,14 @@ export default function MatchView({ user, matchId, onBack }) {
 
           {match.status === 'in_progress' && !currentRound && (
             <WaitingForOpponentPanel
+              user={user}
+              match={match}
               opponentName={opponentName}
               myPlays={myPlays}
               theirPlays={theirPlays}
               rounds={rounds}
               userId={user.id}
+              onClaimed={refresh}
             />
           )}
 
@@ -137,6 +140,8 @@ export default function MatchView({ user, matchId, onBack }) {
               myPlays={myPlays}
               theirPlays={theirPlays}
               opponentName={opponentName}
+              onRematch={onOpenMatch}
+              onBack={onBack}
             />
           )}
         </>
@@ -178,8 +183,34 @@ function OpenMatchPanel({ match }) {
   )
 }
 
-function WaitingForOpponentPanel({ opponentName, myPlays, theirPlays, rounds, userId }) {
+function WaitingForOpponentPanel({ user, match, opponentName, myPlays, theirPlays, rounds, onClaimed }) {
   const totalRounds = rounds.length
+  const [claiming, setClaiming] = useState(false)
+
+  // Stalled = match's last_activity_at older than 7 days. We use it
+  // (not joined_at) so the clock resets every time anyone submits.
+  const lastActivity = match.last_activity_at
+    ? new Date(match.last_activity_at).getTime()
+    : Date.now()
+  const ageDays = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24)
+  const canClaim = ageDays >= 7
+  const daysUntilClaim = Math.max(0, Math.ceil(7 - ageDays))
+
+  async function handleClaim() {
+    if (claiming) return
+    setClaiming(true)
+    try {
+      await claimMatchWin({ matchId: match.id, userId: user.id })
+      toast.success('Match claimed.')
+      onClaimed()
+    } catch (err) {
+      console.error('[claimMatchWin] failed', err)
+      toast.error(err.message || 'Failed to claim match')
+    } finally {
+      setClaiming(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="card p-6 text-center">
@@ -192,6 +223,19 @@ function WaitingForOpponentPanel({ opponentName, myPlays, theirPlays, rounds, us
             ? 'Your round is locked in.'
             : `You've finished all ${totalRounds} rounds.`}
         </p>
+        {canClaim ? (
+          <button
+            onClick={handleClaim}
+            disabled={claiming}
+            className="btn-primary mt-4 text-sm font-display disabled:opacity-50"
+          >
+            {claiming ? 'Claiming…' : `Claim win (${Math.floor(ageDays)} days inactive)`}
+          </button>
+        ) : (
+          <p className="text-[11px] text-wordy-500 mt-3 italic">
+            You can claim the win after 7 days of inactivity (in {daysUntilClaim} day{daysUntilClaim === 1 ? '' : 's'}).
+          </p>
+        )}
       </div>
       <RoundsSummary
         rounds={rounds}
@@ -238,12 +282,28 @@ function RoundsSummary({ rounds, myPlays, theirPlays, opponentName }) {
   )
 }
 
-function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName }) {
+function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName, onRematch, onBack }) {
   const youWon = match.winner_id === user.id
   const tied = !match.winner_id
 
   const myTotal = myPlays.reduce((s, p) => s + p.score, 0)
   const theirTotal = theirPlays.reduce((s, p) => s + p.score, 0)
+
+  const [rematching, setRematching] = useState(false)
+  async function handleRematch() {
+    if (rematching) return
+    setRematching(true)
+    try {
+      const newMatch = await createMatch({ userId: user.id, format: match.format })
+      toast.success('New match posted — your opponent can rejoin.')
+      onRematch(newMatch.id)
+    } catch (err) {
+      console.error('[rematch] failed', err)
+      toast.error(err.message || 'Failed to start rematch')
+    } finally {
+      setRematching(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -255,6 +315,18 @@ function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName
         <p className="mt-2 text-sm text-wordy-600 dark:text-wordy-300">
           Total: <span className="font-bold">{myTotal}</span> · {opponentName} <span className="font-bold">{theirTotal}</span>
         </p>
+        <div className="mt-4 flex gap-2 justify-center">
+          <button
+            onClick={handleRematch}
+            disabled={rematching}
+            className="btn-primary text-sm font-display disabled:opacity-50"
+          >
+            {rematching ? 'Posting…' : '↻ Rematch'}
+          </button>
+          <button onClick={onBack} className="btn-secondary text-sm font-display">
+            Back to lobby
+          </button>
+        </div>
       </div>
 
       {rounds.length > 1 && (

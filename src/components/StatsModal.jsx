@@ -234,29 +234,73 @@ function MyStatsTab({ user }) {
   if (error) return <p className="text-rose-600 text-sm text-center py-6">{error}</p>
   if (!stats) return null
 
+  const winRate = stats.matchesPlayed > 0
+    ? Math.round((stats.wins / stats.matchesPlayed) * 100)
+    : 0
+
   return (
-    <div className="space-y-1">
-      <StatRow icon="🔥" label="Current streak" value={stats.streak === 0 ? '—' : `${stats.streak} day${stats.streak === 1 ? '' : 's'}`} />
-      <StatRow icon="🍃" label="Sessions played" value={stats.sessionCount} />
-      <StatRow icon="🥕" label="Words fed (lifetime)" value={stats.totalWordsFed.toLocaleString()} />
-      <StatRow
-        icon="📏"
-        label="Longest word"
-        value={stats.longestWord ? stats.longestWord.toUpperCase() : '—'}
-      />
-      <StatRow
-        icon="💜"
-        label="Favorite word"
-        value={
-          stats.favoriteWord ? (
-            <>
-              {stats.favoriteWord.toUpperCase()}{' '}
-              <span className="text-wordy-400 font-normal">×{stats.favoriteCount}</span>
-            </>
-          ) : '—'
-        }
-      />
-      <StatRow icon="🌟" label="Pets graduated" value={stats.petsRaised} />
+    <div className="space-y-5">
+      <section>
+        <h3 className="font-display text-xs uppercase tracking-wider text-wordy-500 mb-1 px-1">
+          🍃 Daily play
+        </h3>
+        <div className="space-y-0">
+          <StatRow icon="🔥" label="Current streak" value={stats.streak === 0 ? '—' : `${stats.streak} day${stats.streak === 1 ? '' : 's'}`} />
+          <StatRow icon="📅" label="Sessions played" value={stats.sessionCount} />
+          <StatRow icon="🌟" label="Pets graduated" value={stats.petsRaised} />
+        </div>
+      </section>
+
+      {stats.matchesPlayed > 0 && (
+        <section>
+          <h3 className="font-display text-xs uppercase tracking-wider text-wordy-500 mb-1 px-1">
+            🎮 Multiplayer
+          </h3>
+          <div className="space-y-0">
+            <StatRow icon="🏆" label="Matches played" value={stats.matchesPlayed} />
+            <StatRow
+              icon="📊"
+              label="Win rate"
+              value={
+                <>
+                  {winRate}% <span className="text-wordy-400 font-normal">({stats.wins}–{stats.losses}{stats.ties ? `–${stats.ties}` : ''})</span>
+                </>
+              }
+            />
+            <StatRow
+              icon="🎯"
+              label="Rounds won"
+              value={`${stats.roundsWon} / ${stats.totalRoundsPlayed}`}
+            />
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h3 className="font-display text-xs uppercase tracking-wider text-wordy-500 mb-1 px-1">
+          📚 Lifetime words
+        </h3>
+        <div className="space-y-0">
+          <StatRow icon="🥕" label="Words fed" value={stats.totalWordsFed.toLocaleString()} />
+          <StatRow
+            icon="📏"
+            label="Longest word"
+            value={stats.longestWord ? stats.longestWord.toUpperCase() : '—'}
+          />
+          <StatRow
+            icon="💜"
+            label="Favorite word"
+            value={
+              stats.favoriteWord ? (
+                <>
+                  {stats.favoriteWord.toUpperCase()}{' '}
+                  <span className="text-wordy-400 font-normal">×{stats.favoriteCount}</span>
+                </>
+              ) : '—'
+            }
+          />
+        </div>
+      </section>
     </div>
   )
 }

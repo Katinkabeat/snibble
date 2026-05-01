@@ -32,6 +32,8 @@ export function useMyStats(userId) {
         const [
           { data: feedRows, error: feedErr },
           { data: progressRows, error: progErr },
+          { data: matchRows, error: matchErr },
+          { data: matchPlays, error: matchPlaysErr },
         ] = await Promise.all([
           supabase
             .from('sn_daily_feeds')
@@ -42,13 +44,28 @@ export function useMyStats(userId) {
             .from('sn_progress')
             .select('graduated_at')
             .eq('user_id', userId),
+          supabase
+            .from('sn_matches')
+            .select('id, status, winner_id, creator_id, opponent_id')
+            .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
+            .eq('status', 'completed'),
+          supabase
+            .from('sn_match_round_plays')
+            .select('match_id, round_index, user_id, words_fed, score'),
         ])
         if (feedErr) throw feedErr
         if (progErr) throw progErr
+        if (matchErr) throw matchErr
+        if (matchPlaysErr) throw matchPlaysErr
 
         const allWords = []
         for (const row of feedRows ?? []) {
           for (const w of row.words_fed ?? []) allWords.push(w)
+        }
+        // Include match-mode words in lifetime word totals.
+        const myMatchPlays = (matchPlays ?? []).filter((p) => p.user_id === userId)
+        for (const p of myMatchPlays) {
+          for (const w of p.words_fed ?? []) allWords.push(w)
         }
         const wordAgg = aggregateWords(allWords)
 
@@ -59,6 +76,35 @@ export function useMyStats(userId) {
 
         const petsRaised = (progressRows ?? []).filter((p) => p.graduated_at).length
 
+        // Multiplayer aggregates
+        const matchesPlayed = matchRows?.length ?? 0
+        const wins = (matchRows ?? []).filter((m) => m.winner_id === userId).length
+        const ties = (matchRows ?? []).filter((m) => !m.winner_id).length
+        const losses = matchesPlayed - wins - ties
+
+        // Rounds won — for each completed match, count rounds where my
+        // score beat my opponent's. Group plays by (match, round).
+        let roundsWon = 0
+        let totalRoundsPlayed = 0
+        if (matchRows && matchRows.length > 0) {
+          const completedMatchIds = new Set(matchRows.map((m) => m.id))
+          const playsByMatchRound = new Map()
+          for (const p of matchPlays ?? []) {
+            if (!completedMatchIds.has(p.match_id)) continue
+            const k = `${p.match_id}:${p.round_index}`
+            const arr = playsByMatchRound.get(k) ?? []
+            arr.push(p)
+            playsByMatchRound.set(k, arr)
+          }
+          for (const [, plays] of playsByMatchRound) {
+            const mine = plays.find((p) => p.user_id === userId)
+            const theirs = plays.find((p) => p.user_id !== userId)
+            if (!mine || !theirs) continue
+            totalRoundsPlayed++
+            if (mine.score > theirs.score) roundsWon++
+          }
+        }
+
         if (!active) return
         setStats({
           streak,
@@ -68,6 +114,13 @@ export function useMyStats(userId) {
           favoriteCount: wordAgg.favoriteCount,
           petsRaised,
           sessionCount: feedRows?.length ?? 0,
+          // Multiplayer
+          matchesPlayed,
+          wins,
+          losses,
+          ties,
+          roundsWon,
+          totalRoundsPlayed,
         })
         setError(null)
       } catch (err) {
