@@ -243,6 +243,26 @@ export function rulesAreRedundant(a, b) {
   if (aSub && bAffix && bAffix.includes(aSub)) return true
   if (bSub && aAffix && aAffix.includes(bSub)) return true
 
+  // "starts:X" + "contains:Y" read as the same rule when Y begins with
+  // X's leading letter — both spotlight the same letter at the front
+  // of the word (e.g. starts:S + contains:ST, starts:S + contains:SH).
+  if (a.family === 'starts' && b.family === 'contains'
+      && part(b)[0] === part(a)[0]) return true
+  if (b.family === 'starts' && a.family === 'contains'
+      && part(a)[0] === part(b)[0]) return true
+
+  // Symmetric for the tail of the word: "suffix:X" + "contains:Y" when
+  // Y ends with X's last letter (e.g. suffix:AT + contains:ST both
+  // anchor on a final T-cluster).
+  if (a.family === 'suffix' && b.family === 'contains') {
+    const pa = part(a), pb = part(b)
+    if (pa.length && pb.length && pb[pb.length - 1] === pa[pa.length - 1]) return true
+  }
+  if (b.family === 'suffix' && a.family === 'contains') {
+    const pa = part(a), pb = part(b)
+    if (pa.length && pb.length && pa[pa.length - 1] === pb[pb.length - 1]) return true
+  }
+
   return false
 }
 

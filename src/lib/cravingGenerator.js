@@ -52,6 +52,11 @@ const MATCH_MIN_WORD_LENGTH = 4
 // "viable" — below this, AND-ing the rules would produce too few
 // matches even before tray constraints.
 const MIN_PAIR_INTERSECTION = 30
+// Maximum overlap ratio: if one rule's matches are mostly a subset of
+// the other's (intersect / smaller-set > this), the pair feels
+// duplicative even when families differ. Catches cases like
+// starts:S + contains:ST where most ST words start with S.
+const MAX_PAIR_OVERLAP_RATIO = 0.7
 
 // ───────── Letter pool & tray construction ─────────
 
@@ -207,6 +212,8 @@ async function getViableRulePairs() {
       let intersect = 0
       for (const w of aMatches) if (bMatches.has(w)) intersect++
       if (intersect < MIN_PAIR_INTERSECTION) continue
+      const smaller = Math.min(aMatches.size, bMatches.size)
+      if (smaller > 0 && intersect / smaller > MAX_PAIR_OVERLAP_RATIO) continue
       pairs.push({
         ruleA: a,
         ruleB: b,
