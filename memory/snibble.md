@@ -365,6 +365,29 @@ The `sn_app_settings` table + the RPC live in
 - Seasonal/event pets
 - Generator tuning + possibly themed days
 
+## 2026-05-02 session — match-mode rule-pair dedupe
+
+Players were seeing rule pairs that read as the same constraint twice:
+"start with S-" + "contain -ST-", and earlier "contain -OO-" + "double
+letter" wording overlap. `family`-based filtering wasn't enough because
+the families differ (starts vs contains, special vs contains).
+
+Two layers added:
+
+- **Tighter `rulesAreRedundant` in `src/lib/rules.js`:** flags
+  `starts:X` + `contains:Y` when Y begins with X's leading letter
+  (catches starts:S + contains:ST, contains:SH, etc.). Symmetric
+  `suffix:X` + `contains:Y` when Y ends with X's last letter.
+- **Overlap-ratio cap in `getViableRulePairs`** (`MAX_PAIR_OVERLAP_RATIO
+  = 0.7`): rejects pairs where one rule's match set is mostly a subset
+  of the other's. Belt-and-suspenders for future rules.
+
+Tuning dial: lower the ratio to tighten, raise it (toward 0.8) if the
+viable-pair pool feels too thin. `getViableRulePairs` is cached, so cost
+is paid once per page load.
+
+Commit `5efc275`.
+
 ## Known gotchas
 
 - **Vite `import.meta.env.BASE_URL`** doesn't exist in Node. Test
