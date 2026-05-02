@@ -23,13 +23,12 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
   const others = useOpenMatches(user.id)
   const [joiningId, setJoiningId] = useState(null)
 
-  const loading = mine.loading || others.loading
-  const totalRows =
+  const mineRowCount =
     mine.waitingForOpponent.length +
-    others.matches.length +
     mine.yourTurn.length +
     mine.waitingOnThem.length +
     Math.min(mine.completed.length, 5)
+  const totalRows = mineRowCount + others.matches.length
 
   async function handleJoin(match) {
     if (joiningId) return
@@ -64,18 +63,19 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
         ✨ Start a match
       </button>
 
-        {loading && (
+        {mine.loading && others.loading && (
           <p className="text-xs text-wordy-500 italic text-center py-2">Loading matches…</p>
         )}
 
-        {!loading && totalRows === 0 && (
+        {!mine.loading && !others.loading && totalRows === 0 && (
           <p className="text-xs text-wordy-500 italic text-center py-2">
             No matches yet — start one or wait for someone to post one.
           </p>
         )}
 
-        {!loading && (
-          <div className="space-y-1.5">
+        <div className="space-y-1.5">
+          {!mine.loading && (
+            <>
             {mine.waitingForOpponent.map((m) => (
               <MatchRow
                 key={m.id}
@@ -89,21 +89,25 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 statusText="⏳ Waiting for opponent"
               />
             ))}
+            </>
+          )}
 
-            {others.matches.map((m) => (
-              <MatchRow
-                key={m.id}
-                kind="open-other"
-                creatorName={m.creator.username}
-                opponentName={null}
-                format={m.format}
-                action={joiningId === m.id ? 'Joining…' : 'Join'}
-                onAction={() => handleJoin(m)}
-                disabled={joiningId === m.id}
-                statusText="⏳ Waiting for opponent"
-              />
-            ))}
+          {!others.loading && others.matches.map((m) => (
+            <MatchRow
+              key={m.id}
+              kind="open-other"
+              creatorName={m.creator.username}
+              opponentName={null}
+              format={m.format}
+              action={joiningId === m.id ? 'Joining…' : 'Join'}
+              onAction={() => handleJoin(m)}
+              disabled={joiningId === m.id}
+              statusText="⏳ Waiting for opponent"
+            />
+          ))}
 
+          {!mine.loading && (
+            <>
             {mine.yourTurn.map((m) => (
               <MatchRow
                 key={m.id}
@@ -155,8 +159,9 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
                 }
               />
             ))}
-          </div>
-        )}
+            </>
+          )}
+        </div>
     </section>
   )
 }

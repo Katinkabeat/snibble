@@ -35,33 +35,12 @@ export function useMatches(userId) {
           .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
           .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
           .order('last_activity_at', { ascending: false })
+          .limit(50)
         if (matchErr) throw matchErr
 
-        const matchIds = (matches ?? []).map((m) => m.id)
         const inProgressIds = (matches ?? [])
           .filter((m) => m.status === 'in_progress')
           .map((m) => m.id)
-
-        // For each in-progress match, count how many rounds have a play
-        // submitted by the user vs the opponent. Used to decide bucket
-        // ('your turn' vs 'waiting on them').
-        let playsByMatch = new Map()
-        if (inProgressIds.length > 0) {
-          const { data: plays, error: playsErr } = await supabase
-            .from('sn_match_round_plays')
-            .select('match_id, round_index, user_id')
-            .in('match_id', inProgressIds)
-          if (playsErr) throw playsErr
-          for (const p of plays ?? []) {
-            const arr = playsByMatch.get(p.match_id) ?? []
-            arr.push(p)
-            playsByMatch.set(p.match_id, arr)
-          }
-        }
-
-        // Need round counts per match — pre-create rounds means
-        // sn_match_rounds has 1 (single) or 3 (best_of_3) rows.
-        const roundCount = (m) => (m.format === 'best_of_3' ? 3 : 1)
 
         const userIds = new Set()
         for (const m of matches ?? []) {
@@ -69,14 +48,38 @@ export function useMatches(userId) {
           if (m.opponent_id) userIds.add(m.opponent_id)
         }
         userIds.delete(userId)
-        let profileById = new Map()
-        if (userIds.size > 0) {
-          const { data: profileRows } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_hue')
-            .in('id', Array.from(userIds))
-          for (const p of profileRows ?? []) profileById.set(p.id, p)
+
+        // Plays + profiles both depend only on `matches` — fetch in parallel.
+        const playsPromise = inProgressIds.length > 0
+          ? supabase
+              .from('sn_match_round_plays')
+              .select('match_id, round_index, user_id')
+              .in('match_id', inProgressIds)
+          : Promise.resolve({ data: [], error: null })
+        const profilesPromise = userIds.size > 0
+          ? supabase
+              .from('profiles')
+              .select('id, username, avatar_hue')
+              .in('id', Array.from(userIds))
+          : Promise.resolve({ data: [], error: null })
+
+        const [{ data: plays, error: playsErr }, { data: profileRows }] =
+          await Promise.all([playsPromise, profilesPromise])
+        if (playsErr) throw playsErr
+
+        const playsByMatch = new Map()
+        for (const p of plays ?? []) {
+          const arr = playsByMatch.get(p.match_id) ?? []
+          arr.push(p)
+          playsByMatch.set(p.match_id, arr)
         }
+
+        const profileById = new Map()
+        for (const p of profileRows ?? []) profileById.set(p.id, p)
+
+        // Round counts per match — pre-create rounds means sn_match_rounds
+        // has 1 (single) or 3 (best_of_3) rows.
+        const roundCount = (m) => (m.format === 'best_of_3' ? 3 : 1)
 
         const buckets = {
           waitingForOpponent: [],
