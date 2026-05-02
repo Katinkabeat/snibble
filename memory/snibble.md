@@ -306,10 +306,59 @@ The `sn_app_settings` table + the RPC live in
     function may run before that).
 
 **v2 still pending:**
-- ⏳ Pets 4–6 (Burrow, Bramble, Honey) art — only Mossy/Pip/Mochi
-  have SVGs; the other 10 in sn_pets show placeholder × on cards.
-  Not urgent because no tester graduates a pet for 30+ days.
-- ⏳ Pet stages 2/3 for Pip + Mochi — same reason.
+- ⏳ Year-2 pet art (12 pets: Marlow, Hush, Acorn, Lily, Crumble,
+  Pearl, Velvet, Whirr, Petal, Sprig, Marmalade, Wander). Marlow
+  has art; the other 11 are catalog-only. Year-2 catalog migration
+  drafted at `supabase/migrations/sn_pets_year2_roster.sql` but
+  NOT applied yet — apply when art ships alongside.
+
+## 2026-05-01 session — multiplayer fix + art swap + UX polish
+
+- **Multiplayer join bug fixed:** added `sn_matches join open` RLS
+  policy so a non-creator can claim an open match. Without it, the
+  UPDATE filtered to 0 rows and `.single()` threw "cannot coerce".
+- **Match generator tightened:** cap 50→30 solutions, always-combined
+  rules (single-rule rounds were blowing past the cap), 4-letter
+  minimum on solutions and submit input. Toast "Words must be 4+
+  letters" when shorter words are tried.
+- **Admin delete (superseded same day):** original implementation
+  added a delete RLS policy + 🗑 button on every lobby match row.
+  Replaced later in the day by the soft-close flow below — the
+  per-row 🗑 buttons were removed in favor of a dedicated panel.
+- **Pet art system swapped:** SVG components → PNG images. 14 pets
+  processed (year 1 + Marlow). Pipeline saved in user memory at
+  `reference_snibble_pet_art_pipeline.md` — BiRefNet + hard alpha
+  threshold (200) + bbox crop + 5% margin + 512×512 LANCZOS resize.
+  `src/lib/pets.jsx` exports a `<PetImage>` wrapper with
+  `object-contain` so pets don't squish in non-square slots
+  (sanctuary card especially). Single image per pet — growth bar
+  still tracks progress, picture just doesn't change with stage.
+  All `src/components/pets/*.jsx` SVG files removed.
+- **Match draft persistence:** `wordsFed` saved to localStorage
+  keyed by `snibble:match:<id>:r<idx>:u<uid>:words` so closing the
+  app or navigating away mid-round preserves progress. Cleared on
+  successful submission.
+
+## Admin close-match (added later 2026-05-01)
+
+- **`sn_matches.closed_by_admin` BOOLEAN column** + new RPC
+  `sn_admin_close_match(p_match_id)` (security-definer, gated on
+  `admins.permissions @> ['close_games']`). Sets status='completed',
+  winner_id=null, closed_by_admin=true. Plus
+  `sn_admin_list_open_matches` RPC for the panel.
+- **UX swap:** removed the per-row 🗑 trash buttons from
+  MultiplayerCard and the inline `isAdmin`/`handleCancel` logic.
+  Replaced with a dedicated `AdminPanel.jsx` (Close Matches view)
+  reachable from the settings dropdown's "Admin panel · 🔐 Open"
+  row, routed via `?view=admin`. Matches Wordy/Rungles' separate-
+  panel pattern.
+- **Banners updated:** CompletedPanel in MatchView shows
+  🛑 + "Game closed by admin"; lobby completed-row status shows
+  "🛑 Closed by admin". `closed_by_admin` added to the useMatches
+  select.
+- Migration: `supabase/migrations/sn_matches_admin_close.sql`. The
+  earlier `sn_matches_admin_delete.sql` policy is now unused — the
+  delete RLS rule still exists but nothing in the app calls it.
 
 **v3:**
 - Pets 7–13 (full year roster)

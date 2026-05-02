@@ -32,7 +32,7 @@ export function useMatches(userId) {
       try {
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, format, status, creator_id, opponent_id, winner_id, created_at, joined_at, completed_at, last_activity_at')
+          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
           .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
           .order('last_activity_at', { ascending: false })
         if (matchErr) throw matchErr

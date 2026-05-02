@@ -283,8 +283,9 @@ function RoundsSummary({ rounds, myPlays, theirPlays, opponentName }) {
 }
 
 function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName, onRematch, onBack }) {
-  const youWon = match.winner_id === user.id
-  const tied = !match.winner_id
+  const closedByAdmin = !!match.closed_by_admin
+  const youWon = !closedByAdmin && match.winner_id === user.id
+  const tied = !closedByAdmin && !match.winner_id
 
   const myTotal = myPlays.reduce((s, p) => s + p.score, 0)
   const theirTotal = theirPlays.reduce((s, p) => s + p.score, 0)
@@ -308,9 +309,13 @@ function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName
   return (
     <div className="space-y-4">
       <div className="card p-6 text-center">
-        <p className="text-5xl mb-2">{youWon ? '🏆' : tied ? '🤝' : '🌙'}</p>
+        <p className="text-5xl mb-2">{closedByAdmin ? '🛑' : youWon ? '🏆' : tied ? '🤝' : '🌙'}</p>
         <p className="font-display text-2xl text-wordy-800 dark:text-wordy-100">
-          {youWon ? 'You won!' : tied ? 'A tie!' : `${opponentName} won.`}
+          {closedByAdmin
+            ? 'Game closed by admin'
+            : youWon ? 'You won!'
+            : tied ? 'A tie!'
+            : `${opponentName} won.`}
         </p>
         <p className="mt-2 text-sm text-wordy-600 dark:text-wordy-300">
           Total: <span className="font-bold">{myTotal}</span> · {opponentName} <span className="font-bold">{theirTotal}</span>

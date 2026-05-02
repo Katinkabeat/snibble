@@ -188,6 +188,21 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
               🧹 Wipe
             </button>
           </div>
+          <div className="settings-row">
+            <span className="text-sm font-bold text-wordy-600">Admin panel</span>
+            <button
+              onClick={() => {
+                onClose()
+                const url = `${window.location.pathname}?view=admin${window.location.hash}`
+                window.history.pushState({}, '', url)
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
+              className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
+              title="Open the admin panel (close stuck matches, etc.)"
+            >
+              🔐 Open
+            </button>
+          </div>
         </>
       )}
 

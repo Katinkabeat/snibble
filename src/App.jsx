@@ -5,6 +5,7 @@ import LobbyView from './components/LobbyView.jsx'
 import GameView from './components/GameView.jsx'
 import SanctuaryView from './components/SanctuaryView.jsx'
 import MatchView from './components/MatchView.jsx'
+import AdminPanel from './components/AdminPanel.jsx'
 import { preloadDictionary } from './lib/dictionary.js'
 
 // SQ hub URL — unauthed visitors get bounced here so the hub handles login.
@@ -78,6 +79,9 @@ export default function App() {
   }
   if (queryParam('view') === 'sanctuary') {
     return <SanctuaryView user={session.user} onBack={() => goTo('')} />
+  }
+  if (queryParam('view') === 'admin') {
+    return <AdminPanel user={session.user} onBack={() => goTo('')} />
   }
   const matchId = queryParam('match')
   if (matchId) {
