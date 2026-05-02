@@ -2,12 +2,13 @@
 //  MultiplayerCard — lobby section for two-player matches.
 //
 //  Top: "Start a match" button (opens CreateMatchSheet).
-//  Below: unified list of matches:
+//  Then: completed-match result banners (persistent until dismissed,
+//  capped at 10 most recent — see CompletedMatchBanner.jsx).
+//  Below: active-match rows in this order:
 //    1. Open (yours: "waiting for opponent")
 //    2. Open (others: tap to join)
 //    3. Your turn
 //    4. Waiting on them
-//    5. Recent completed
 //
 //  Row layout matches Wordy/Rungles exactly: white-ish row card with
 //  player chips, format/status sub-text, action button on the right.
@@ -17,6 +18,7 @@ import toast from 'react-hot-toast'
 import { useState } from 'react'
 import { useMatches, useOpenMatches } from '../hooks/useMatches.js'
 import { joinMatch } from '../lib/matchActions.js'
+import CompletedMatchBanner from './CompletedMatchBanner.jsx'
 
 export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
   const mine = useMatches(user.id)
@@ -26,9 +28,8 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
   const mineRowCount =
     mine.waitingForOpponent.length +
     mine.yourTurn.length +
-    mine.waitingOnThem.length +
-    Math.min(mine.completed.length, 5)
-  const totalRows = mineRowCount + others.matches.length
+    mine.waitingOnThem.length
+  const totalRows = mineRowCount + others.matches.length + mine.completed.length
 
   async function handleJoin(match) {
     if (joiningId) return
@@ -62,6 +63,15 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
       <button onClick={onCreateMatch} className="btn-primary text-sm font-display mb-3">
         ✨ Start a match
       </button>
+
+        {!mine.loading && mine.completed.length > 0 && (
+          <CompletedMatchBanner
+            matches={mine.completed}
+            userId={user.id}
+            onView={onOpenMatch}
+            onDismissed={mine.reload}
+          />
+        )}
 
         {mine.loading && others.loading && (
           <p className="text-xs text-wordy-500 italic text-center py-2">Loading matches…</p>
@@ -138,27 +148,6 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
               />
             ))}
 
-            {mine.completed.slice(0, 5).map((m) => (
-              <MatchRow
-                key={m.id}
-                kind="completed"
-                creatorName={m.isCreator ? 'You' : (m.opponent?.username ?? '?')}
-                opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
-                youAreCreator={m.isCreator}
-                format={m.format}
-                action="Result"
-                onAction={() => onOpenMatch(m)}
-                statusText={
-                  m.closed_by_admin
-                    ? '🛑 Closed by admin'
-                    : m.youWon
-                      ? '🏆 You won'
-                      : m.winner_id
-                        ? '🌙 They won'
-                        : '🤝 Tied'
-                }
-              />
-            ))}
             </>
           )}
         </div>

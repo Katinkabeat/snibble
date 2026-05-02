@@ -32,14 +32,25 @@ export function useMatches(userId) {
       try {
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
+          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at, creator_dismissed_at, opponent_dismissed_at')
           .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
           .order('last_activity_at', { ascending: false })
           .limit(50)
         if (matchErr) throw matchErr
 
-        const inProgressIds = (matches ?? [])
-          .filter((m) => m.status === 'in_progress')
+        // Plays are needed for two reasons:
+        //   1. in_progress matches → determine whose turn it is
+        //   2. completed (undismissed) matches → score subtext on banner
+        const playsNeededIds = (matches ?? [])
+          .filter((m) => {
+            if (m.status === 'in_progress') return true
+            if (m.status === 'completed' || m.status === 'expired') {
+              const isCreator = m.creator_id === userId
+              const myDismissed = isCreator ? m.creator_dismissed_at : m.opponent_dismissed_at
+              return !myDismissed
+            }
+            return false
+          })
           .map((m) => m.id)
 
         const userIds = new Set()
@@ -50,11 +61,11 @@ export function useMatches(userId) {
         userIds.delete(userId)
 
         // Plays + profiles both depend only on `matches` — fetch in parallel.
-        const playsPromise = inProgressIds.length > 0
+        const playsPromise = playsNeededIds.length > 0
           ? supabase
               .from('sn_match_round_plays')
-              .select('match_id, round_index, user_id')
-              .in('match_id', inProgressIds)
+              .select('match_id, round_index, user_id, score')
+              .in('match_id', playsNeededIds)
           : Promise.resolve({ data: [], error: null })
         const profilesPromise = userIds.size > 0
           ? supabase
@@ -91,16 +102,28 @@ export function useMatches(userId) {
         for (const m of matches ?? []) {
           const otherId = m.creator_id === userId ? m.opponent_id : m.creator_id
           const other = otherId ? profileById.get(otherId) : null
+          const isCreator = m.creator_id === userId
+          const myDismissedAt = isCreator ? m.creator_dismissed_at : m.opponent_dismissed_at
           const enriched = {
             ...m,
             opponent: other ? { id: otherId, username: other.username, avatarHue: other.avatar_hue } : null,
-            isCreator: m.creator_id === userId,
+            isCreator,
             youWon: m.winner_id === userId,
+            myDismissedAt,
           }
 
           if (m.status === 'open') {
             buckets.waitingForOpponent.push(enriched)
           } else if (m.status === 'completed' || m.status === 'expired') {
+            const plays = playsByMatch.get(m.id) ?? []
+            let yourScore = 0
+            let theirScore = 0
+            for (const p of plays) {
+              if (p.user_id === userId) yourScore += p.score ?? 0
+              else theirScore += p.score ?? 0
+            }
+            enriched.yourScore = yourScore
+            enriched.theirScore = theirScore
             buckets.completed.push(enriched)
           } else if (m.status === 'in_progress') {
             const plays = playsByMatch.get(m.id) ?? []
@@ -122,8 +145,13 @@ export function useMatches(userId) {
           }
         }
 
-        // Cap completed at 10 most-recent.
-        buckets.completed = buckets.completed.slice(0, 10)
+        // Cap completed at 10 most-recent UNDISMISSED matches. Once a
+        // player taps ✕ on a banner, that match drops out of the
+        // visible list for them (the row stays in the DB so the other
+        // player still sees their own banner).
+        buckets.completed = buckets.completed
+          .filter((m) => !m.myDismissedAt)
+          .slice(0, 10)
 
         if (!active) return
         setData(buckets)
