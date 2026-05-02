@@ -33,7 +33,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { rngFromSeed, dailySeedString } from './rng.js'
-import { BASE_RULES, combineRules, weightedPick } from './rules.js'
+import { BASE_RULES, combineRules, weightedPick, rulesAreRedundant } from './rules.js'
 import { getDictionary, getCommonWordSet, isCommonWord } from './dictionary.js'
 
 const MIN_SOLUTIONS = 12
@@ -201,6 +201,7 @@ async function getViableRulePairs() {
       const a = BASE_RULES[i]
       const b = BASE_RULES[j]
       if (a.family === b.family) continue
+      if (rulesAreRedundant(a, b)) continue
       const aMatches = matchesByRule.get(a.id)
       const bMatches = matchesByRule.get(b.id)
       let intersect = 0

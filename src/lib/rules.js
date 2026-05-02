@@ -207,6 +207,45 @@ export const PHASE3_BONUSES = [
 
 // ───────── Helpers ─────────
 
+/**
+ * True if rule A logically implies rule B (every word matching A also
+ * matches B), or vice versa. Used to keep match-mode from pairing two
+ * rules that say the same thing — e.g. "contains OO" + "contain a
+ * double letter", or "starts with TH" + "contains -TH-".
+ */
+export function rulesAreRedundant(a, b) {
+  if (a.id === b.id) return true
+
+  const part = (r) => r.id.split(':')[1] || ''
+  const isDouble = (s) => s.length >= 2 && /^(.)\1+$/.test(s)
+  const endsDouble = (s) =>
+    s.length >= 2 && s[s.length - 1] === s[s.length - 2]
+
+  // Anything that guarantees a double letter is redundant with the
+  // special:double-letter rule.
+  const guaranteesDouble = (r) => {
+    if (r.id === 'special:double-letter') return true
+    if (r.family === 'contains' && isDouble(part(r))) return true
+    if (r.family === 'suffix' && endsDouble(part(r))) return true
+    return false
+  }
+  if (guaranteesDouble(a) && guaranteesDouble(b)) return true
+
+  // contains:X subsumed by starts:X or suffix:X when the affix already
+  // includes that substring (e.g. starts:TH ⇒ contains:TH).
+  const containsSub = (r) => (r.family === 'contains' ? part(r) : null)
+  const affix = (r) =>
+    r.family === 'starts' || r.family === 'suffix' ? part(r) : null
+  const aSub = containsSub(a)
+  const bSub = containsSub(b)
+  const aAffix = affix(a)
+  const bAffix = affix(b)
+  if (aSub && bAffix && bAffix.includes(aSub)) return true
+  if (bSub && aAffix && aAffix.includes(bSub)) return true
+
+  return false
+}
+
 /** Combine multiple rules into one (all must match). */
 export function combineRules(rules) {
   const labels = rules.map((r) => r.label)
