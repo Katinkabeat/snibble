@@ -14,8 +14,10 @@ import { useEffect, useState } from 'react'
 import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useStreak } from '../hooks/useStreak.js'
+import { useMatches } from '../hooks/useMatches.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import MultiplayerCard from './MultiplayerCard.jsx'
+import CompletedMatchesSection from './CompletedMatchesSection.jsx'
 import CreateMatchSheet from './CreateMatchSheet.jsx'
 import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
@@ -25,7 +27,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
   const { streak } = useStreak(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
   const [showCreateMatch, setShowCreateMatch] = useState(false)
-  const [matchesRefreshKey, setMatchesRefreshKey] = useState(0)
+  const mine = useMatches(user.id)
 
   useEffect(() => {
     let active = true
@@ -114,11 +116,20 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         </section>
 
         <MultiplayerCard
-          key={matchesRefreshKey}
           user={user}
+          mine={mine}
           onCreateMatch={() => setShowCreateMatch(true)}
           onOpenMatch={(m) => onOpenMatch(m.id)}
         />
+
+        {!mine.loading && (
+          <CompletedMatchesSection
+            matches={mine.completed}
+            userId={user.id}
+            onView={(m) => onOpenMatch(m.id)}
+            onDismissed={mine.reload}
+          />
+        )}
 
         {/* Sanctuary — Pokemon-style pet collection */}
         <section className="card">
@@ -136,7 +147,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
           onClose={() => setShowCreateMatch(false)}
           onCreated={() => {
             setShowCreateMatch(false)
-            setMatchesRefreshKey((k) => k + 1)
+            mine.reload()
           }}
         />
       )}

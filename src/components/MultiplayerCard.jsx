@@ -16,12 +16,10 @@
 
 import toast from 'react-hot-toast'
 import { useState } from 'react'
-import { useMatches, useOpenMatches } from '../hooks/useMatches.js'
+import { useOpenMatches } from '../hooks/useMatches.js'
 import { joinMatch } from '../lib/matchActions.js'
-import CompletedMatchBanner from './CompletedMatchBanner.jsx'
 
-export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
-  const mine = useMatches(user.id)
+export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch }) {
   const others = useOpenMatches(user.id)
   const [joiningId, setJoiningId] = useState(null)
 
@@ -29,7 +27,7 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
     mine.waitingForOpponent.length +
     mine.yourTurn.length +
     mine.waitingOnThem.length
-  const totalRows = mineRowCount + others.matches.length + mine.completed.length
+  const totalRows = mineRowCount + others.matches.length
 
   async function handleJoin(match) {
     if (joiningId) return
@@ -63,15 +61,6 @@ export default function MultiplayerCard({ user, onCreateMatch, onOpenMatch }) {
       <button onClick={onCreateMatch} className="btn-primary text-sm font-display mb-3">
         ✨ Start a match
       </button>
-
-        {!mine.loading && mine.completed.length > 0 && (
-          <CompletedMatchBanner
-            matches={mine.completed}
-            userId={user.id}
-            onView={onOpenMatch}
-            onDismissed={mine.reload}
-          />
-        )}
 
         {mine.loading && others.loading && (
           <p className="text-xs text-wordy-500 italic text-center py-2">Loading matches…</p>

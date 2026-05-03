@@ -15,19 +15,15 @@ import { dismissMatch } from '../lib/matchActions.js'
 export default function CompletedMatchBanner({ matches, userId, onView, onDismissed }) {
   if (!matches || matches.length === 0) return null
 
-  return (
-    <div className="space-y-2 mb-3">
-      {matches.map((m) => (
-        <BannerRow
-          key={m.id}
-          match={m}
-          userId={userId}
-          onView={onView}
-          onDismissed={onDismissed}
-        />
-      ))}
-    </div>
-  )
+  return matches.map((m) => (
+    <BannerRow
+      key={m.id}
+      match={m}
+      userId={userId}
+      onView={onView}
+      onDismissed={onDismissed}
+    />
+  ))
 }
 
 function BannerRow({ match, userId, onView, onDismissed }) {

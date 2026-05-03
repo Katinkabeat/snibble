@@ -365,6 +365,57 @@ The `sn_app_settings` table + the RPC live in
 - Seasonal/event pets
 - Generator tuning + possibly themed days
 
+## 2026-05-03 session — split completed matches into own SQ card
+
+Finished match banners were rendering inside `MultiplayerCard` (above the
+active list). Wordy and Rungles use a separate `SQCompletedGamesCard`
+section below their multiplayer card, so Snibble was the odd one out.
+
+Changes:
+- New `CompletedMatchesSection.jsx` wraps `CompletedMatchBanner` in
+  `SQCompletedGamesCard` (title: "🏁 Completed Matches"), matching
+  Rungles' `CompletedGamesSection` pattern.
+- `useMatches` lifted from `MultiplayerCard` up to `LobbyView` so both
+  the multiplayer card and the new completed section can read from one
+  fetch (no duplicate query). `MultiplayerCard` now takes `mine` as a
+  prop; the in-component `useMatches()` call was removed.
+- `LobbyView` renders the new section between Multiplayer and Sanctuary.
+- `CompletedMatchBanner` outer `<div className="space-y-2 mb-3">`
+  removed since `SQCompletedGamesCard` provides spacing — banner now
+  returns a fragment-style array of `BannerRow`s.
+- `CreateMatchSheet`'s `onCreated` callback switched from a key-bump
+  refresh trick to `mine.reload()` since the hook now lives in
+  `LobbyView`.
+
+## 2026-05-02 session — lobby perf + completed-match dismiss banner
+
+**Lobby loading was slow** — `MultiplayerCard` ran two hooks
+(`useMatches` + `useOpenMatches`) and gated the whole card on
+`mine.loading || others.loading`. `useMatches` itself made 3 sequential
+Supabase round-trips (matches → plays → profiles), with no `.limit()` on
+the unbounded match-history query.
+
+Fixes (commit `5f6aba0`):
+- `useMatches`: added `.limit(50)` to the matches query; parallelized
+  the plays + profiles fetches with `Promise.all` (3 round-trips → 2).
+- `MultiplayerCard`: split the loading state so "your matches" renders
+  as soon as `useMatches` finishes, independent of `useOpenMatches`.
+  Each section now appears in its own slot rather than waiting for
+  both hooks.
+
+**Completed-match dismiss banners** (separate change, same day):
+- Added `creator_dismissed_at` / `opponent_dismissed_at` columns to
+  `sn_matches`. Each player can dismiss their own banner without
+  affecting the other player's view; the row stays in the DB.
+- New `CompletedMatchBanner.jsx` component renders above the active
+  match list — persistent banner card with score subtext + ✕ button.
+- `useMatches` selects the new columns + the per-play `score` field,
+  computes `yourScore` / `theirScore` / `myDismissedAt` per match, and
+  filters `buckets.completed` to undismissed only. Plays are also
+  fetched for any undismissed completed match (not just in_progress).
+- The old "last 5 completed rows" inline list in `MultiplayerCard` was
+  removed in favour of the banner.
+
 ## 2026-05-02 session — match-mode rule-pair dedupe
 
 Players were seeing rule pairs that read as the same constraint twice:
