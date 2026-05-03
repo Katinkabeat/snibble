@@ -199,20 +199,6 @@ export async function claimMatchWin({ matchId, userId }) {
 }
 
 /**
- * Dismiss a completed-match banner for the calling user. Sets the
- * appropriate per-side timestamp so the banner stops appearing in
- * THIS player's lobby — the opponent's banner is unaffected.
- */
-export async function dismissMatch({ matchId, userId, isCreator }) {
-  const column = isCreator ? 'creator_dismissed_at' : 'opponent_dismissed_at'
-  const { error } = await supabase
-    .from('sn_matches')
-    .update({ [column]: new Date().toISOString() })
-    .eq('id', matchId)
-  if (error) throw error
-}
-
-/**
  * Reconstruct a rule matcher from base_rule_ids stored on the round.
  * Single id → that rule. Two ids → AND-combined.
  */

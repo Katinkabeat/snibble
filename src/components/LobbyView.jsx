@@ -136,9 +136,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         {!mine.loading && (
           <CompletedMatchesSection
             matches={mine.completed}
-            userId={user.id}
             onView={(m) => onOpenMatch(m.id)}
-            onDismissed={mine.reload}
           />
         )}
       {showCreateMatch && (

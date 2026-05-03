@@ -32,7 +32,7 @@ export function useMatches(userId) {
       try {
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at, creator_dismissed_at, opponent_dismissed_at')
+          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
           .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
           .order('last_activity_at', { ascending: false })
           .limit(50)
@@ -42,15 +42,7 @@ export function useMatches(userId) {
         //   1. in_progress matches → determine whose turn it is
         //   2. completed (undismissed) matches → score subtext on banner
         const playsNeededIds = (matches ?? [])
-          .filter((m) => {
-            if (m.status === 'in_progress') return true
-            if (m.status === 'completed' || m.status === 'expired') {
-              const isCreator = m.creator_id === userId
-              const myDismissed = isCreator ? m.creator_dismissed_at : m.opponent_dismissed_at
-              return !myDismissed
-            }
-            return false
-          })
+          .filter((m) => m.status === 'in_progress' || m.status === 'completed' || m.status === 'expired')
           .map((m) => m.id)
 
         const userIds = new Set()
@@ -103,13 +95,11 @@ export function useMatches(userId) {
           const otherId = m.creator_id === userId ? m.opponent_id : m.creator_id
           const other = otherId ? profileById.get(otherId) : null
           const isCreator = m.creator_id === userId
-          const myDismissedAt = isCreator ? m.creator_dismissed_at : m.opponent_dismissed_at
           const enriched = {
             ...m,
             opponent: other ? { id: otherId, username: other.username, avatarHue: other.avatar_hue } : null,
             isCreator,
             youWon: m.winner_id === userId,
-            myDismissedAt,
           }
 
           if (m.status === 'open') {
@@ -145,13 +135,10 @@ export function useMatches(userId) {
           }
         }
 
-        // Cap completed at 10 most-recent UNDISMISSED matches. Once a
-        // player taps ✕ on a banner, that match drops out of the
-        // visible list for them (the row stays in the DB so the other
-        // player still sees their own banner).
-        buckets.completed = buckets.completed
-          .filter((m) => !m.myDismissedAt)
-          .slice(0, 10)
+        // Cap completed at the 10 most-recent matches. No dismiss filter —
+        // the section always shows the last 10 so users have a consistent
+        // place to find their recent games.
+        buckets.completed = buckets.completed.slice(0, 10)
 
         if (!active) return
         setData(buckets)
