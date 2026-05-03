@@ -34,7 +34,6 @@ const PET_IDS = [
   'burrow', 'bramble', 'honey', 'pebble',
   'bobbin', 'cinder', 'cosmo', 'quill',
   'kettle', 'frost',
-  // year 2 (art TBD — rendering will 404 until the PNG ships)
   'marlow', 'hush', 'acorn', 'lily', 'crumble',
   'pearl', 'velvet', 'whirr', 'petal', 'sprig',
   'marmalade', 'wander',

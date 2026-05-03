@@ -177,7 +177,7 @@ function OpenMatchPanel({ match }) {
         Waiting for someone to join from their lobby's match list.
       </p>
       <p className="text-xs text-wordy-500 mt-3 italic">
-        {match.format === 'best_of_3' ? 'Best of 3' : 'Single round'}
+        Single round
       </p>
     </div>
   )
@@ -295,7 +295,7 @@ function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName
     if (rematching) return
     setRematching(true)
     try {
-      const newMatch = await createMatch({ userId: user.id, format: match.format })
+      const newMatch = await createMatch({ userId: user.id })
       toast.success('New match posted — your opponent can rejoin.')
       onRematch(newMatch.id)
     } catch (err) {

@@ -18,7 +18,6 @@ import { useMatches } from '../hooks/useMatches.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import MultiplayerCard from './MultiplayerCard.jsx'
 import CompletedMatchesSection from './CompletedMatchesSection.jsx'
-import CreateMatchSheet from './CreateMatchSheet.jsx'
 import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQLobbyShell } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
@@ -26,7 +25,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
   const { petInfo, loading: petLoading } = useActivePet(user.id)
   const { streak } = useStreak(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
-  const [showCreateMatch, setShowCreateMatch] = useState(false)
   const mine = useMatches(user.id)
 
   useEffect(() => {
@@ -118,7 +116,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         <MultiplayerCard
           user={user}
           mine={mine}
-          onCreateMatch={() => setShowCreateMatch(true)}
           onOpenMatch={(m) => onOpenMatch(m.id)}
         />
 
@@ -139,16 +136,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
             onView={(m) => onOpenMatch(m.id)}
           />
         )}
-      {showCreateMatch && (
-        <CreateMatchSheet
-          user={user}
-          onClose={() => setShowCreateMatch(false)}
-          onCreated={() => {
-            setShowCreateMatch(false)
-            mine.reload()
-          }}
-        />
-      )}
     </SQLobbyShell>
   )
 }

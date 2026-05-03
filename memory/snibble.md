@@ -290,13 +290,14 @@ The `sn_app_settings` table + the RPC live in
   - sn_matches / sn_match_rounds / sn_match_round_plays tables
   - Combined-rule cravings (~80% combined, 20% single) on a 7-letter
     tray; smart rule-pairing precompute caches viable AND-able pairs
-  - Single round + best-of-3 (one craving revealed at a time per
-    player; resolves per-round once both submit)
+  - Single round only (best-of-3 was removed 2026-05-03 to align all
+    SQ games on a uniform "click Create → match posted" flow). The
+    `sn_matches.format` column is vestigial — always 'single' on new
+    rows; harmless to leave.
   - Lobby multiplayer card mirrors Rungles — Start a match button +
     unified list (open by anyone, your turn, waiting on them, recent
     completed). "N your turn" badge on the section header.
-  - Rematch button on completed match (posts a new public match in
-    the same format)
+  - Rematch button on completed match (posts a new public match)
   - 7-day claim-win for stalled matches
   - Push notifications: opponent_joined + round_submitted triggers →
     snibble-push-notification Edge Function. Subscription fallback
@@ -305,12 +306,13 @@ The `sn_app_settings` table + the RPC live in
     (since match.status updates after the play insert and the
     function may run before that).
 
-**v2 still pending:**
-- ⏳ Year-2 pet art (12 pets: Marlow, Hush, Acorn, Lily, Crumble,
-  Pearl, Velvet, Whirr, Petal, Sprig, Marmalade, Wander). Marlow
-  has art; the other 11 are catalog-only. Year-2 catalog migration
-  drafted at `supabase/migrations/sn_pets_year2_roster.sql` but
-  NOT applied yet — apply when art ships alongside.
+**v2 — year-2 roster shipped:**
+- ✅ Year-2 catalog migration (`supabase/migrations/sn_pets_year2_roster.sql`)
+  applied — all 12 pets present in `sn_pets` with `unlock_order` 13–24
+  (Marlow, Hush, Acorn, Lily, Crumble, Pearl, Velvet, Whirr, Petal,
+  Sprig, Marmalade, Wander).
+- ✅ All 12 year-2 PNGs in `public/pets/` and registered in
+  `src/lib/pets.jsx` PET_COMPONENTS.
 
 ## 2026-05-01 session — multiplayer fix + art swap + UX polish
 
@@ -467,4 +469,19 @@ Note: `sn_matches.creator_dismissed_at` / `opponent_dismissed_at` columns still 
 Snibble's query already ordered on the parent table (`last_activity_at`) so there was no order-by bug to fix here, just the dismiss UX alignment.
 
 **Commit:** `5734188`.
+
+
+### Session: 2026-05-03 — Drop best-of-3 + create-match popup
+
+Goal: align all three SQ games on a uniform "click Create → match posted" flow. Wordy's create flow (player-count picker only) and Rungles' (single button, fixed 10 rungs) were already minimal; Snibble's two-step format picker was the odd one out.
+
+Changes:
+- Deleted `CreateMatchSheet.jsx` entirely. `MultiplayerCard` now owns the Start-a-match button + a local `creating` state, calling `createMatch` directly.
+- `LobbyView` no longer carries `showCreateMatch` state or the popup mount.
+- `createMatch({ userId })` — dropped `format` param. Always inserts `format: 'single'` and pre-creates exactly one round.
+- `submitMatchRound` — `total = 1` (was branched on `match.format`). `useMatches` `roundCount` collapsed to constant 1.
+- Stripped format label from `MatchRow`, `OpenMatchPanel`, `AdminPanel` lobby row, and dropped `format` from useMatches' SELECT lists. MatchView's rematch handler no longer threads `match.format` through.
+- `sn_matches.format` column left in DB (vestigial, same pattern as `phases_done`).
+
+Confirmed in preview: lobby renders, network queries 200, no console errors. No active best-of-3 matches in flight at time of change (Rae confirmed).
 

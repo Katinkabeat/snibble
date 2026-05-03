@@ -1,7 +1,8 @@
 // ────────────────────────────────────────────────────────────
 //  MultiplayerCard — lobby section for two-player matches.
 //
-//  Top: "Start a match" button (opens CreateMatchSheet).
+//  Top: "Start a match" button (creates a single-craving match
+//  directly, no popup).
 //  Then: completed-match result banners (persistent until dismissed,
 //  capped at 10 most recent — see CompletedMatchBanner.jsx).
 //  Below: active-match rows in this order:
@@ -11,17 +12,33 @@
 //    4. Waiting on them
 //
 //  Row layout matches Wordy/Rungles exactly: white-ish row card with
-//  player chips, format/status sub-text, action button on the right.
+//  player chips, status sub-text, action button on the right.
 // ────────────────────────────────────────────────────────────
 
 import toast from 'react-hot-toast'
 import { useState } from 'react'
 import { useOpenMatches } from '../hooks/useMatches.js'
-import { joinMatch } from '../lib/matchActions.js'
+import { createMatch, joinMatch } from '../lib/matchActions.js'
 
-export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch }) {
+export default function MultiplayerCard({ user, mine, onOpenMatch }) {
   const others = useOpenMatches(user.id)
   const [joiningId, setJoiningId] = useState(null)
+  const [creating, setCreating] = useState(false)
+
+  async function handleCreate() {
+    if (creating) return
+    setCreating(true)
+    try {
+      await createMatch({ userId: user.id })
+      toast.success('Match posted — waiting for an opponent.')
+      mine.reload()
+    } catch (err) {
+      console.error('[createMatch] failed', err)
+      toast.error(err.message || 'Failed to create match')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const mineRowCount =
     mine.waitingForOpponent.length +
@@ -58,8 +75,12 @@ export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch
       <p className="text-sm text-wordy-600 mb-3">
         Same craving + same letters. Highest score wins.
       </p>
-      <button onClick={onCreateMatch} className="btn-primary text-sm font-display mb-3">
-        ✨ Start a match
+      <button
+        onClick={handleCreate}
+        disabled={creating}
+        className="btn-primary text-sm font-display mb-3 disabled:opacity-60"
+      >
+        {creating ? '⏳ Creating…' : '✨ Start a match'}
       </button>
 
         {mine.loading && others.loading && (
@@ -82,7 +103,6 @@ export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch
                 userName={user.userMetadata?.username}
                 creatorName={user.user_metadata?.username ?? 'You'}
                 opponentName={null}
-                format={m.format}
                 action="Resume"
                 onAction={() => onOpenMatch(m)}
                 statusText="⏳ Waiting for opponent"
@@ -97,7 +117,6 @@ export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch
               kind="open-other"
               creatorName={m.creator.username}
               opponentName={null}
-              format={m.format}
               action={joiningId === m.id ? 'Joining…' : 'Join'}
               onAction={() => handleJoin(m)}
               disabled={joiningId === m.id}
@@ -115,7 +134,6 @@ export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch
                 opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
                 youAreCreator={m.isCreator}
                 youHighlight
-                format={m.format}
                 action="Play"
                 onAction={() => onOpenMatch(m)}
                 statusText={`🟢 Your turn · ${timeAgo(m.last_activity_at)}`}
@@ -130,7 +148,6 @@ export default function MultiplayerCard({ user, mine, onCreateMatch, onOpenMatch
                 opponentName={m.isCreator ? (m.opponent?.username ?? '?') : 'You'}
                 youAreCreator={m.isCreator}
                 themHighlight
-                format={m.format}
                 action="View"
                 onAction={() => onOpenMatch(m)}
                 statusText={`⏳ Waiting on ${m.opponent?.username ?? 'them'} · ${timeAgo(m.last_activity_at)}`}
@@ -155,13 +172,11 @@ function MatchRow({
   youAreCreator,
   youHighlight,
   themHighlight,
-  format,
   action,
   onAction,
   disabled,
   statusText,
 }) {
-  const formatLabel = format === 'best_of_3' ? 'Best of 3' : 'Single'
   return (
     <div className="flex items-center justify-between bg-wordy-50 rounded-xl px-3 py-2 border border-wordy-100">
       <div className="flex-1 min-w-0">
@@ -181,7 +196,7 @@ function MatchRow({
           )}
         </div>
         <p className="text-xs text-wordy-400 mt-0.5">
-          {formatLabel} · {statusText}
+          {statusText}
         </p>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">

@@ -95,7 +95,7 @@ export default function AdminPanel({ user, onBack }) {
                           {m.creator_name ?? '?'} vs {m.opponent_name ?? '?'}
                         </div>
                         <div className="text-xs text-wordy-500 dark:text-wordy-300">
-                          {m.format === 'best_of_3' ? 'Best of 3' : 'Single'} · {m.status} · {new Date(m.last_activity_at).toLocaleDateString()}
+                          {m.status} · {new Date(m.last_activity_at).toLocaleDateString()}
                         </div>
                       </div>
                       {!isPrompting && (

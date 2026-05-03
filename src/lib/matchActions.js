@@ -11,19 +11,15 @@ import { RULES_BY_ID, combineRules } from './rules.js'
 
 /**
  * Create a new match. Inserts the sn_matches row, then pre-generates
- * + inserts the round puzzles.
+ * + inserts the single round puzzle.
  *
  * Returns the new match row.
  */
-export async function createMatch({ userId, format }) {
-  if (format !== 'single' && format !== 'best_of_3') {
-    throw new Error(`Unknown format: ${format}`)
-  }
-
+export async function createMatch({ userId }) {
   const { data: match, error: matchErr } = await supabase
     .from('sn_matches')
     .insert({
-      format,
+      format: 'single',
       status: 'open',
       creator_id: userId,
       is_public: true,
@@ -32,14 +28,13 @@ export async function createMatch({ userId, format }) {
     .single()
   if (matchErr) throw matchErr
 
-  const roundCount = format === 'best_of_3' ? 3 : 1
-  const rounds = []
-  for (let i = 0; i < roundCount; i++) {
-    const seed = matchSeedString(match.id, i)
-    const puzzle = await generateMatchPuzzle(seed)
-    rounds.push({
+  const seed = matchSeedString(match.id, 0)
+  const puzzle = await generateMatchPuzzle(seed)
+  const { error: roundsErr } = await supabase
+    .from('sn_match_rounds')
+    .insert({
       match_id: match.id,
-      round_index: i,
+      round_index: 0,
       seed,
       base_rule_ids: puzzle.base.ids,
       letters: puzzle.letters,
@@ -47,11 +42,6 @@ export async function createMatch({ userId, format }) {
       par_count: puzzle.parCount,
       difficulty: puzzle.difficulty,
     })
-  }
-
-  const { error: roundsErr } = await supabase
-    .from('sn_match_rounds')
-    .insert(rounds)
   if (roundsErr) throw roundsErr
 
   return match
@@ -107,12 +97,12 @@ export async function submitMatchRound({ matchId, roundIndex, userId, wordsFed }
   // Check completion: do BOTH players have plays for every round?
   const { data: match } = await supabase
     .from('sn_matches')
-    .select('format, creator_id, opponent_id, status')
+    .select('creator_id, opponent_id, status')
     .eq('id', matchId)
     .single()
   if (!match || match.status === 'completed') return { complete: false, score }
 
-  const total = match.format === 'best_of_3' ? 3 : 1
+  const total = 1
 
   // sn_match_round_plays RLS lets each player see their own + opponent's
   // (after both submit a given round). For the "are we done" check we

@@ -32,7 +32,7 @@ export function useMatches(userId) {
       try {
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, format, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
+          .select('id, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
           .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
           .order('last_activity_at', { ascending: false })
           .limit(50)
@@ -80,9 +80,7 @@ export function useMatches(userId) {
         const profileById = new Map()
         for (const p of profileRows ?? []) profileById.set(p.id, p)
 
-        // Round counts per match — pre-create rounds means sn_match_rounds
-        // has 1 (single) or 3 (best_of_3) rows.
-        const roundCount = (m) => (m.format === 'best_of_3' ? 3 : 1)
+        const roundCount = () => 1
 
         const buckets = {
           waitingForOpponent: [],
@@ -173,7 +171,7 @@ export function useOpenMatches(currentUserId) {
       try {
         const { data: rows, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, format, creator_id, created_at')
+          .select('id, creator_id, created_at')
           .eq('status', 'open')
           .eq('is_public', true)
           .neq('creator_id', currentUserId)
