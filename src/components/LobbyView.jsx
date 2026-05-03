@@ -122,15 +122,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
           onOpenMatch={(m) => onOpenMatch(m.id)}
         />
 
-        {!mine.loading && (
-          <CompletedMatchesSection
-            matches={mine.completed}
-            userId={user.id}
-            onView={(m) => onOpenMatch(m.id)}
-            onDismissed={mine.reload}
-          />
-        )}
-
         {/* Sanctuary — Pokemon-style pet collection */}
         <section className="card">
           <h2 className="font-display text-xl text-wordy-700 mb-1">🌿 Sanctuary</h2>
@@ -141,6 +132,15 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
             Open →
           </button>
         </section>
+
+        {!mine.loading && (
+          <CompletedMatchesSection
+            matches={mine.completed}
+            userId={user.id}
+            onView={(m) => onOpenMatch(m.id)}
+            onDismissed={mine.reload}
+          />
+        )}
       {showCreateMatch && (
         <CreateMatchSheet
           user={user}
