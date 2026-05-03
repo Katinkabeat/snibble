@@ -454,3 +454,17 @@ Commit `5efc275`.
 - **Per-game theme key** — Snibble uses `snibble-theme` localStorage
   key. Wordy uses `wordy-theme`. Each game tracks its own theme
   preference (no cross-game sync).
+
+
+### Session: 2026-05-03 — Completed Matches: drop dismiss flow
+
+Mirrored Wordy/Rungles' completed-games fix to Snibble:
+- **Always show 10:** `useMatches` no longer filters out matches with `creator_dismissed_at` / `opponent_dismissed_at`. The Completed Matches section now always shows the 10 most recent.
+- **Removed dismiss UI:** `CompletedMatchBanner` no longer renders the X button or `dismissing` state. "Result" link renamed to "View Game" to match Wordy/Rungles. `dismissMatch` helper deleted from `lib/matchActions.js`. `LobbyView` no longer passes `onDismissed`.
+
+Note: `sn_matches.creator_dismissed_at` / `opponent_dismissed_at` columns still exist in the DB — harmless leftovers, no need to migrate them out.
+
+Snibble's query already ordered on the parent table (`last_activity_at`) so there was no order-by bug to fix here, just the dismiss UX alignment.
+
+**Commit:** `5734188`.
+
