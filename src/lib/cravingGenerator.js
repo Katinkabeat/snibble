@@ -229,11 +229,28 @@ async function getViableRulePairs() {
   return pairs
 }
 
-export async function generateMatchPuzzle(seedString) {
+/**
+ * Normalize a rule-pair into a stable key so [A,B] and [B,A] hash the
+ * same. Single-rule pairs (length 1) get just that id.
+ */
+export function rulePairKey(ruleIds) {
+  return [...ruleIds].sort().join('|')
+}
+
+export async function generateMatchPuzzle(seedString, options = {}) {
+  const { excludePairKeys = null } = options
   const dictionary = await getDictionary()
   const commonSet = await getCommonWordSet()
-  const viablePairs = await getViableRulePairs()
+  const allViablePairs = await getViableRulePairs()
   const rng = rngFromSeed(seedString)
+
+  // Apply the exclusion list if one was provided. Fall back to the
+  // full pool if every pair is excluded (extreme edge case — would
+  // mean a player has played hundreds of distinct combos).
+  const filteredPairs = (excludePairKeys && excludePairKeys.size > 0)
+    ? allViablePairs.filter(p => !excludePairKeys.has(rulePairKey([p.ruleA.id, p.ruleB.id])))
+    : allViablePairs
+  const viablePairs = filteredPairs.length > 0 ? filteredPairs : allViablePairs
 
   let attempt = 0
   while (attempt < MATCH_MAX_REGENERATIONS) {

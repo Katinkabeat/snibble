@@ -6,8 +6,40 @@
 // ────────────────────────────────────────────────────────────
 
 import { supabase } from './supabase.js'
-import { generateMatchPuzzle, matchSeedString, scoreWord } from './cravingGenerator.js'
+import { generateMatchPuzzle, matchSeedString, scoreWord, rulePairKey } from './cravingGenerator.js'
 import { RULES_BY_ID, combineRules } from './rules.js'
+
+// How many recent matches per player to consider when deduping rule
+// pairs at creation time. Friend matches dedup against both players'
+// recent history; open matches against the creator's history only.
+const RULE_PAIR_HISTORY_DEPTH = 15
+
+/**
+ * Fetch the rule-pair keys from each player's most recent matches.
+ * Used to filter the viable-pair pool before picking a new match's
+ * rule pair, so back-to-back matches don't repeat combos.
+ */
+async function fetchRecentRulePairKeys(userIds) {
+  const validIds = (userIds || []).filter(Boolean)
+  if (validIds.length === 0) return new Set()
+  const { data, error } = await supabase.rpc('sn_recent_match_rule_ids', {
+    p_user_ids: validIds,
+    p_limit: RULE_PAIR_HISTORY_DEPTH,
+  })
+  if (error) {
+    // Soft-fail: log and proceed without dedup. Better to occasionally
+    // repeat a combo than to break match creation entirely.
+    console.warn('[matchActions] rule-pair history fetch failed:', error.message)
+    return new Set()
+  }
+  const keys = new Set()
+  for (const row of data ?? []) {
+    if (Array.isArray(row.rule_ids) && row.rule_ids.length > 0) {
+      keys.add(rulePairKey(row.rule_ids))
+    }
+  }
+  return keys
+}
 
 /**
  * Create a new match. Inserts the sn_matches row, then pre-generates
@@ -21,6 +53,11 @@ import { RULES_BY_ID, combineRules } from './rules.js'
  * Returns the new match row.
  */
 export async function createMatch({ userId, invitedUserId = null }) {
+  // Friend invite → dedup against both players' history. Open match →
+  // creator only (opponent unknown at creation time).
+  const historyUserIds = invitedUserId ? [userId, invitedUserId] : [userId]
+  const excludePairKeys = await fetchRecentRulePairKeys(historyUserIds)
+
   const { data: match, error: matchErr } = await supabase
     .from('sn_matches')
     .insert({
@@ -35,7 +72,7 @@ export async function createMatch({ userId, invitedUserId = null }) {
   if (matchErr) throw matchErr
 
   const seed = matchSeedString(match.id, 0)
-  const puzzle = await generateMatchPuzzle(seed)
+  const puzzle = await generateMatchPuzzle(seed, { excludePairKeys })
   const { error: roundsErr } = await supabase
     .from('sn_match_rounds')
     .insert({

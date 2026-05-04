@@ -60,6 +60,17 @@ const SUFFIXES = [
   { suffix: 'IGHT', weight: 1 },
   { suffix: 'ATE',  weight: 1 },
   { suffix: 'ION',  weight: 1 },
+  // Long suffixes — naturally narrow, recognizable shapes
+  { suffix: 'TION', weight: 2, minWordLen: 5 },
+  { suffix: 'ABLE', weight: 2, minWordLen: 5 },
+  { suffix: 'MENT', weight: 1, minWordLen: 5 },
+  { suffix: 'NESS', weight: 1, minWordLen: 5 },
+  { suffix: 'LESS', weight: 1, minWordLen: 5 },
+  // 3-letter suffixes filling gaps
+  { suffix: 'ITE',  weight: 2, minWordLen: 4 },
+  { suffix: 'ORE',  weight: 2, minWordLen: 4 },
+  { suffix: 'AIN',  weight: 2, minWordLen: 4 },
+  { suffix: 'ICE',  weight: 2, minWordLen: 4 },
 ]
 
 const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3 }) => ({
@@ -83,6 +94,21 @@ const CONTAINS = [
   { sub: 'AI', weight: 3 },
   { sub: 'OA', weight: 3 },
   { sub: 'ST', weight: 3 },
+  // 3-letter substrings — narrower for richer pair variety
+  { sub: 'OUN', weight: 3 },
+  { sub: 'EAR', weight: 3 },
+  { sub: 'OUR', weight: 3 },
+  { sub: 'INE', weight: 3 },
+  { sub: 'ACK', weight: 3 },
+  { sub: 'ILL', weight: 3 },
+  { sub: 'ANG', weight: 3 },
+  { sub: 'ONG', weight: 2 },
+  { sub: 'UNG', weight: 2 },
+  { sub: 'IGH', weight: 3 },
+  { sub: 'OUS', weight: 3 },
+  { sub: 'TCH', weight: 2 },
+  { sub: 'NGE', weight: 2 },
+  { sub: 'RGE', weight: 2 },
 ]
 
 const containsRules = CONTAINS.map(({ sub, weight }) => ({
@@ -106,6 +132,27 @@ const STARTS_WITH = [
   { prefix: 'BR', weight: 2 },
   { prefix: 'ST', weight: 2 },
   { prefix: 'TR', weight: 2 },
+  // 2-letter consonant clusters
+  { prefix: 'BL', weight: 3 },
+  { prefix: 'CL', weight: 3 },
+  { prefix: 'FL', weight: 3 },
+  { prefix: 'GL', weight: 2 },
+  { prefix: 'PL', weight: 3 },
+  { prefix: 'SL', weight: 3 },
+  { prefix: 'CR', weight: 3 },
+  { prefix: 'DR', weight: 3 },
+  { prefix: 'FR', weight: 3 },
+  { prefix: 'GR', weight: 3 },
+  { prefix: 'SC', weight: 3 },
+  { prefix: 'SK', weight: 2 },
+  { prefix: 'SM', weight: 2 },
+  { prefix: 'SN', weight: 2 },
+  { prefix: 'SP', weight: 3 },
+  { prefix: 'SW', weight: 2 },
+  // Common syllable prefixes
+  { prefix: 'UN', weight: 3 },
+  { prefix: 'RE', weight: 3 },
+  { prefix: 'DE', weight: 3 },
 ]
 
 const startsRules = STARTS_WITH.map(({ prefix, weight }) => ({
@@ -142,12 +189,89 @@ const specialRules = [
   },
 ]
 
+// ───────── Length rules ─────────
+// Word-length buckets — slice the dictionary cleanly and pair well
+// with most other families. Highest leverage of any single addition.
+const lengthRules = [
+  {
+    id: 'length:exact-5',
+    family: 'length',
+    label: 'exactly 5 letters',
+    matches: (w) => w.length === 5,
+    weight: 4,
+  },
+  {
+    id: 'length:exact-6',
+    family: 'length',
+    label: 'exactly 6 letters',
+    matches: (w) => w.length === 6,
+    weight: 4,
+  },
+  {
+    id: 'length:7-plus',
+    family: 'length',
+    label: '7 or more letters',
+    matches: (w) => w.length >= 7,
+    weight: 3,
+  },
+]
+
+// ───────── Letter-set rules ─────────
+// Constraints on which letters do/don't appear. Note: rack filler may
+// still place these letters in the tray; players just won't be able
+// to use them in solutions, same as today's "decorative" tiles.
+const lettersetRules = [
+  {
+    id: 'letterset:one-vowel',
+    family: 'letterset',
+    label: 'has exactly one vowel',
+    matches: (w) => w.length >= 3 && vowelCount(w) === 1,
+    weight: 3,
+  },
+  {
+    id: 'letterset:no-e',
+    family: 'letterset',
+    label: 'contains no E',
+    matches: (w) => w.length >= 3 && !w.includes('E'),
+    weight: 3,
+  },
+  {
+    id: 'letterset:has-y',
+    family: 'letterset',
+    label: 'contains a Y',
+    matches: (w) => w.length >= 3 && w.includes('Y'),
+    weight: 3,
+  },
+]
+
+// ───────── Pattern rules ─────────
+// Letter shape constraints at word boundaries.
+const patternRules = [
+  {
+    id: 'pattern:ends-2-consonants',
+    family: 'pattern',
+    label: 'ends with two consonants',
+    matches: (w) => w.length >= 3 && !isVowel(w[w.length - 1]) && !isVowel(w[w.length - 2]),
+    weight: 3,
+  },
+  {
+    id: 'pattern:starts-2-consonants',
+    family: 'pattern',
+    label: 'starts with two consonants',
+    matches: (w) => w.length >= 3 && !isVowel(w[0]) && !isVowel(w[1]),
+    weight: 3,
+  },
+]
+
 // ───────── Aggregated base-rule pool ─────────
 export const BASE_RULES = [
   ...suffixRules,
   ...containsRules,
   ...startsRules,
   ...specialRules,
+  ...lengthRules,
+  ...lettersetRules,
+  ...patternRules,
 ]
 
 /** Map of id → rule for easy lookup. */
