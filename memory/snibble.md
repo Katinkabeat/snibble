@@ -441,6 +441,47 @@ is paid once per page load.
 
 Commit `5efc275`.
 
+## 2026-05-04 session — rule pool expansion + history dedup
+
+Match mode was repeating combos too often (Rae saw "starts B + ends ER"
+twice in 5 matches). Two fixes shipped together:
+
+**Rule pool expanded from 43 → 93 rules (`src/lib/rules.js`).** Added:
+
+- 9 new suffixes (long: `-TION`, `-ABLE`, `-MENT`, `-NESS`, `-LESS`;
+  3-letter: `-ITE`, `-ORE`, `-AIN`, `-ICE`)
+- 14 new contains (3-letter substrings: `-OUN-`, `-EAR-`, `-INE-`,
+  `-ACK-`, `-ILL-`, `-OUS-`, `-IGH-`, `-NGE-`, `-TCH-`, etc.)
+- 19 new starts-with (consonant clusters: `BL-`, `CL-`, `FL-`, `CR-`,
+  `GR-`, `SP-`, etc.; syllable prefixes: `UN-`, `RE-`, `DE-`)
+- 3 new families:
+  - `length` (exactly 5 / exactly 6 / 7+ letters)
+  - `letterset` (one vowel / no E / has Y)
+  - `pattern` (starts or ends with two consonants)
+
+Viable pair pool grew from 184 → ~680. Median pair-intersection
+unchanged at 84 words, so puzzle difficulty is preserved. The
+existing redundancy + overlap filters in `cravingGenerator.js` handle
+all the new rule shapes without modification.
+
+**Recent-pair dedup at `createMatch` time (`src/lib/matchActions.js`).**
+`generateMatchPuzzle` now accepts an `excludePairKeys` Set option;
+`createMatch` queries the new RPC `sn_recent_match_rule_ids` for the
+last 15 matches' rule pairs per player and filters them out. Friend
+invites dedup against both players' history; open matches against
+the creator's history only (opponent unknown at creation).
+
+The RPC is `security definer` because RLS on `sn_match_rounds` blocks
+non-participants from reading rule IDs. Migration:
+`supabase/migrations/sn_recent_match_rule_ids.sql`. Returns just
+`text[]` rule-id rows — letters/scores/submissions stay protected.
+
+Same-pair odds in 5 matches dropped from 5.3% → 1.5%; 30-match
+sliding window simulation produced 0 repeats. Stress test in
+`analysis/match-stress-test.mjs`.
+
+Commit `639da9f`.
+
 ## Known gotchas
 
 - **Vite `import.meta.env.BASE_URL`** doesn't exist in Node. Test
