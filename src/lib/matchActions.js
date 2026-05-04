@@ -13,16 +13,22 @@ import { RULES_BY_ID, combineRules } from './rules.js'
  * Create a new match. Inserts the sn_matches row, then pre-generates
  * + inserts the single round puzzle.
  *
+ * Pass `invitedUserId` to make it a private friend invite (only that
+ * user can see/join, auto-cancels in 3 days). Omit for an open match
+ * (anyone joins, auto-cancels in 7 days). expires_at is filled by the
+ * sn_set_match_expiry trigger — we don't pass it.
+ *
  * Returns the new match row.
  */
-export async function createMatch({ userId }) {
+export async function createMatch({ userId, invitedUserId = null }) {
   const { data: match, error: matchErr } = await supabase
     .from('sn_matches')
     .insert({
       format: 'single',
       status: 'open',
       creator_id: userId,
-      is_public: true,
+      invited_user_id: invitedUserId,
+      is_public: invitedUserId == null,
     })
     .select()
     .single()
@@ -45,6 +51,28 @@ export async function createMatch({ userId }) {
   if (roundsErr) throw roundsErr
 
   return match
+}
+
+/**
+ * Cancel a match the current user created. Server enforces:
+ *   - caller is the creator
+ *   - status is 'open' or 'in_progress'
+ *   - no plays have been submitted yet
+ * On success, status → 'cancelled' and cancelled_at = now().
+ */
+export async function cancelMatch({ matchId }) {
+  const { error } = await supabase.rpc('sn_cancel_match', { p_match_id: matchId })
+  if (error) throw error
+}
+
+/**
+ * Sweeps any past-expiry open matches to status='expired'. Safe to
+ * call from anywhere — server-side function only updates rows that
+ * are actually past their deadline.
+ */
+export async function expireStaleMatches() {
+  const { error } = await supabase.rpc('sn_expire_stale_matches')
+  if (error) throw error
 }
 
 /** Join an open match as the opponent. Flips status → in_progress. */

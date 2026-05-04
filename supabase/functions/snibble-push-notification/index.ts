@@ -1,12 +1,14 @@
 // Supabase Edge Function: Snibble Push Notifications
 //
-// Two trigger types from DB:
+// Three trigger types from DB:
 //   1. opponent_joined  — fires on sn_matches when opponent_id flips
 //                          null → not null. Notifies the match creator.
 //   2. round_submitted  — fires on every sn_match_round_plays insert.
 //                          Notifies the OTHER player (not the submitter).
 //                          If the match auto-completed with this insert,
 //                          appends "Match complete!" to the body.
+//   3. match_invited    — fires on sn_matches INSERT when invited_user_id
+//                          is set. Notifies the invitee.
 //
 // Subscription fallback order: ['sidequest', 'snibble'] — most users
 // have opted into notifications via the SQ hub (app='sidequest'), so
@@ -78,6 +80,24 @@ serve(async (req: Request) => {
     const payload = await req.json()
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+    // ── match_invited: sn_matches INSERT with invited_user_id set ──
+    if (payload.type === 'match_invited') {
+      const { record } = payload
+      if (!record?.id || !record.creator_id || !record.invited_user_id) {
+        return new Response(JSON.stringify({ skipped: 'missing fields' }), { status: 200, headers: corsHeaders })
+      }
+
+      const inviterName = await getUsername(supabase, record.creator_id)
+      const result = await sendPushToUser(supabase, record.invited_user_id, {
+        title: 'Snibble — match invite',
+        body: `${inviterName} invited you to a match. Tap to play! 🍃`,
+        tag: `snibble-invite-${record.id}`,
+        url: `/snibble/?match=${record.id}`,
+        icon: '/snibble/favicon.svg',
+      })
+      return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
+    }
+
     // ── opponent_joined: sn_matches UPDATE, opponent_id null → set ──
     if (payload.type === 'opponent_joined') {
       const { record } = payload
@@ -106,7 +126,7 @@ serve(async (req: Request) => {
       // Look up match to find the opponent (recipient).
       const { data: match } = await supabase
         .from('sn_matches')
-        .select('id, creator_id, opponent_id, status, format')
+        .select('id, creator_id, opponent_id, status')
         .eq('id', record.match_id)
         .single()
       if (!match) {
@@ -120,7 +140,7 @@ serve(async (req: Request) => {
       }
 
       const submitterName = await getUsername(supabase, record.user_id)
-      const totalRounds = match.format === 'best_of_3' ? 3 : 1
+      const totalRounds = 1
 
       // Count plays directly so we don't depend on match.status being
       // updated yet — the client flips status='completed' AFTER the

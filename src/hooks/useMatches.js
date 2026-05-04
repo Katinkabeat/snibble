@@ -3,17 +3,24 @@
 //
 //  Returns rows partitioned into buckets matching the lobby card's
 //  sort order:
+//    invitedToYou       : matches where you're the invited friend (status='open')
 //    waitingForOpponent : open matches you created, no opponent yet
 //    yourTurn           : matches in_progress where YOU still owe a play
 //    waitingOnThem      : matches in_progress where opponent owes a play
-//    completed          : recent completed matches (last 10)
+//    completed          : recent completed/expired matches (last 10)
+//
+//  Cancelled matches are excluded — they disappear cleanly from
+//  the lobby. Auto-expired matches stay so the user can see that
+//  their open match timed out without an opponent.
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { expireStaleMatches } from '../lib/matchActions.js'
 
 export function useMatches(userId) {
   const [data, setData] = useState({
+    invitedToYou: [],
     waitingForOpponent: [],
     yourTurn: [],
     waitingOnThem: [],
@@ -30,10 +37,16 @@ export function useMatches(userId) {
     async function load() {
       setLoading(true)
       try {
+        // Lazy-sweep any open matches past their expires_at deadline before
+        // we read. Server-side function only updates rows that need it;
+        // this is cheap and keeps the lobby honest without a cron.
+        try { await expireStaleMatches() } catch { /* non-fatal */ }
+
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
-          .select('id, status, creator_id, opponent_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at')
-          .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
+          .select('id, status, creator_id, opponent_id, invited_user_id, winner_id, closed_by_admin, created_at, joined_at, completed_at, last_activity_at, expires_at, cancelled_at')
+          .or(`creator_id.eq.${userId},opponent_id.eq.${userId},invited_user_id.eq.${userId}`)
+          .neq('status', 'cancelled')
           .order('last_activity_at', { ascending: false })
           .limit(50)
         if (matchErr) throw matchErr
@@ -49,6 +62,7 @@ export function useMatches(userId) {
         for (const m of matches ?? []) {
           userIds.add(m.creator_id)
           if (m.opponent_id) userIds.add(m.opponent_id)
+          if (m.invited_user_id) userIds.add(m.invited_user_id)
         }
         userIds.delete(userId)
 
@@ -83,6 +97,7 @@ export function useMatches(userId) {
         const roundCount = () => 1
 
         const buckets = {
+          invitedToYou: [],
           waitingForOpponent: [],
           yourTurn: [],
           waitingOnThem: [],
@@ -90,17 +105,27 @@ export function useMatches(userId) {
         }
 
         for (const m of matches ?? []) {
-          const otherId = m.creator_id === userId ? m.opponent_id : m.creator_id
-          const other = otherId ? profileById.get(otherId) : null
           const isCreator = m.creator_id === userId
+          const isInvitee = m.invited_user_id === userId && !isCreator
+          // For an invitee on an unjoined match, the "other" person is
+          // the creator. Otherwise it's whoever isn't us, with the
+          // invited user as a fallback for the creator's pre-join view.
+          let otherId
+          if (isInvitee) otherId = m.creator_id
+          else otherId = m.creator_id === userId ? (m.opponent_id ?? m.invited_user_id) : m.creator_id
+          const other = otherId ? profileById.get(otherId) : null
           const enriched = {
             ...m,
             opponent: other ? { id: otherId, username: other.username, avatarHue: other.avatar_hue } : null,
+            invitee: m.invited_user_id ? profileById.get(m.invited_user_id) ?? null : null,
             isCreator,
+            isInvitee,
             youWon: m.winner_id === userId,
           }
 
-          if (m.status === 'open') {
+          if (m.status === 'open' && isInvitee) {
+            buckets.invitedToYou.push(enriched)
+          } else if (m.status === 'open') {
             buckets.waitingForOpponent.push(enriched)
           } else if (m.status === 'completed' || m.status === 'expired') {
             const plays = playsByMatch.get(m.id) ?? []

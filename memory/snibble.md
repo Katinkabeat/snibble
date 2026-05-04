@@ -471,6 +471,37 @@ Snibble's query already ordered on the parent table (`last_activity_at`) so ther
 **Commit:** `5734188`.
 
 
+### Session: 2026-05-03 — Invite-a-friend feature
+
+Added private friend-invite flow on top of the existing open-match flow. Same single "Start a match" button now opens a sheet with two modes: 🌍 Open (anyone joins, 7-day auto-cancel) and 👥 With a friend (only invitee joins, 3-day auto-cancel).
+
+**Schema (`sn_matches_invite_friend.sql`, applied to live DB):**
+- `sn_matches.invited_user_id` (uuid?) — if set, only this user can see + join
+- `sn_matches.expires_at` (timestamptz) — auto-set by `sn_set_match_expiry` BEFORE-INSERT trigger; 3d for invited, 7d for open
+- `sn_matches.cancelled_at` (timestamptz?) — set when creator manually cancels
+- New status value `'cancelled'` added to check constraint
+- Read-RLS replaced — invited matches hidden from non-participants (creator/invitee/opponent only)
+- New RPC `sn_cancel_match(uuid)` — creator-only, blocked once any plays exist
+- New RPC `sn_expire_stale_matches()` — sweeps past-expiry open matches to status='expired'; lobby calls lazily on load
+- New trigger `on_sn_match_invited` → POSTs to snibble-push-notification with type=`match_invited`
+- The existing `sn_matches join open` policy already permits the invitee to claim (uses `creator_id <> auth.uid()`), no extra policy needed
+
+**Edge function update (deployed):** `match_invited` handler in `snibble-push-notification` — looks up inviter username, sends "Snibble — match invite: {inviter} invited you to a match" push to invitee.
+
+**Frontend:**
+- `src/hooks/useFriends.js` — fetches accepted friends from hub's `friendships` + `profiles` tables (no duplication; same data source as hub's Friends panel)
+- `src/components/CreateMatchSheet.jsx` (rebuilt) — toggle (Open / With a friend), search input, scrollable friend list with avatar chips + checkbox, dynamic action button label (`Send invite to {name}`)
+- `src/lib/matchActions.js` — `createMatch({ userId, invitedUserId? })` flips `is_public=false` when invited; new `cancelMatch({ matchId })` and `expireStaleMatches()` helpers
+- `src/hooks/useMatches.js` — new `invitedToYou` bucket; query OR'd to include `invited_user_id.eq.<me>`; filters out cancelled; lazy-calls `expireStaleMatches` before reading
+- `src/components/MultiplayerCard.jsx` — owns the sheet state; renders `invitedToYou` rows with amber Accept button; creator's waiting-for-opponent rows show ✕ cancel + "📨 Invited {name}" subtext when invited
+
+**Verified in preview:** sheet opens with Open mode by default, toggle swaps to friend mode, 3 accepted friends load (Krispy/Onyi/snuggie), search filters as you type, friend selection updates button label to "Send invite to {name}", cancel ✕ buttons appear on existing waiting-for-opponent rows.
+
+**Auto-expiry:** lazy via `sn_expire_stale_matches()` called on each lobby load. Cron is a future add.
+
+**Cancelled vs expired UX:** cancelled matches disappear from lobby entirely (clean disappearance). Expired matches still appear in completed banner so user sees their open match timed out.
+
+
 ### Session: 2026-05-03 — Drop best-of-3 + create-match popup
 
 Goal: align all three SQ games on a uniform "click Create → match posted" flow. Wordy's create flow (player-count picker only) and Rungles' (single button, fixed 10 rungs) were already minimal; Snibble's two-step format picker was the odd one out.
