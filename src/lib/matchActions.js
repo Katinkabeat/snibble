@@ -56,19 +56,25 @@ export async function createMatch({ userId, invitedUserId = null }) {
   // Friend invite → dedup against both players' history. Open match →
   // creator only (opponent unknown at creation time).
   const historyUserIds = invitedUserId ? [userId, invitedUserId] : [userId]
-  const excludePairKeys = await fetchRecentRulePairKeys(historyUserIds)
 
-  const { data: match, error: matchErr } = await supabase
-    .from('sn_matches')
-    .insert({
-      format: 'single',
-      status: 'open',
-      creator_id: userId,
-      invited_user_id: invitedUserId,
-      is_public: invitedUserId == null,
-    })
-    .select()
-    .single()
+  // History fetch and match insert are independent — only the puzzle
+  // step downstream needs both. Running them in parallel saves one
+  // round-trip (~100-200ms) on every invite.
+  const [excludePairKeys, matchResult] = await Promise.all([
+    fetchRecentRulePairKeys(historyUserIds),
+    supabase
+      .from('sn_matches')
+      .insert({
+        format: 'single',
+        status: 'open',
+        creator_id: userId,
+        invited_user_id: invitedUserId,
+        is_public: invitedUserId == null,
+      })
+      .select()
+      .single(),
+  ])
+  const { data: match, error: matchErr } = matchResult
   if (matchErr) throw matchErr
 
   const seed = matchSeedString(match.id, 0)
