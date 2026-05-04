@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase.js'
 import { isCommonWord } from '../lib/dictionary.js'
-import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin } from '../lib/matchActions.js'
+import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinMatch } from '../lib/matchActions.js'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
@@ -82,6 +82,28 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
     : null
   const opponentName = otherProfile?.username ?? 'opponent'
 
+  // Auto-accept invite when the invited user deep-links into an open
+  // match (typically via push notification). Without this, MatchView
+  // would just show the generic "waiting for someone to join" panel
+  // even though THIS user is the one supposed to join.
+  const autoJoiningRef = useRef(false)
+  useEffect(() => {
+    if (!match || autoJoiningRef.current) return
+    if (match.status !== 'open') return
+    if (match.invited_user_id !== user.id) return
+    autoJoiningRef.current = true
+    joinMatch({ matchId: match.id, userId: user.id })
+      .then(() => {
+        toast.success('Invite accepted!')
+        refresh()
+      })
+      .catch((err) => {
+        console.error('[MatchView] auto-join failed', err)
+        toast.error(err.message || 'Failed to accept invite')
+        autoJoiningRef.current = false
+      })
+  }, [match, user.id])
+
   // Per-round play lookups
   const myPlays = plays.filter((p) => p.user_id === user.id)
   const theirPlays = plays.filter((p) => p.user_id !== user.id)
@@ -105,7 +127,14 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
 
       {!loading && !error && match && (
         <>
-          {match.status === 'open' && <OpenMatchPanel match={match} />}
+          {match.status === 'open' && match.invited_user_id === user.id && (
+            <div className="card p-6 text-center">
+              <p className="text-4xl mb-3">📨</p>
+              <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">Accepting invite…</p>
+              <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">One sec, joining the match.</p>
+            </div>
+          )}
+          {match.status === 'open' && match.invited_user_id !== user.id && <OpenMatchPanel match={match} />}
 
           {match.status === 'in_progress' && currentRound && (
             <RoundPlayPanel
