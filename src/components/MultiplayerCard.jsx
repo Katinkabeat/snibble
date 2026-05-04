@@ -130,7 +130,7 @@ export default function MultiplayerCard({ user, mine, onOpenMatch }) {
                 onAction={() => onOpenMatch(m)}
                 statusText={
                   isInvite
-                    ? `📨 Invited ${inviteeName ?? 'friend'} — waiting for them`
+                    ? `📨 Invited ${inviteeName ?? 'friend'}`
                     : '⏳ Waiting for opponent'
                 }
                 onCancel={() => handleCancel(m)}
