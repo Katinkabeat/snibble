@@ -81,6 +81,10 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
     ? (match.creator_id === user.id ? opponent : creator)
     : null
   const opponentName = otherProfile?.username ?? 'opponent'
+  const myProfile = match
+    ? (match.creator_id === user.id ? creator : opponent)
+    : null
+  const myName = myProfile?.username ?? 'you'
 
   // Auto-accept invite when the invited user deep-links into an open
   // match (typically via push notification). Without this, MatchView
@@ -142,6 +146,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
               match={match}
               round={currentRound}
               opponentName={opponentName}
+              myName={myName}
               totalRounds={totalRounds}
               completedRounds={resolvedRounds(rounds, myPlays, theirPlays, user.id)}
               onSubmitted={refresh}
@@ -446,7 +451,7 @@ function WordListPanel({ title, words, highlightSet, highlightLabel }) {
 
 // ───────── Round play UI ─────────
 
-function RoundPlayPanel({ user, match, round, opponentName, totalRounds, completedRounds, onSubmitted }) {
+function RoundPlayPanel({ user, match, round, opponentName, myName, totalRounds, completedRounds, onSubmitted }) {
   const matcher = useMemo(() => matcherFromBaseIds(round.base_rule_ids), [round.base_rule_ids])
   const draftKey = `snibble:match:${match.id}:r${round.round_index}:u${user.id}:words`
   const [built, setBuilt] = useState([])
@@ -566,7 +571,7 @@ function RoundPlayPanel({ user, match, round, opponentName, totalRounds, complet
     <>
       <div className="mb-2 text-center">
         <p className="text-xs text-wordy-500 font-bold uppercase tracking-wide">
-          vs. {opponentName} {totalRounds > 1 && `· Round ${round.round_index + 1} of ${totalRounds}`}
+          {myName} vs. {opponentName} {totalRounds > 1 && `· Round ${round.round_index + 1} of ${totalRounds}`}
         </p>
       </div>
 
