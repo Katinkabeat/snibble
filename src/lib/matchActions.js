@@ -14,7 +14,7 @@ import { RULES_BY_ID, combineRules } from './rules.js'
  * + inserts the single round puzzle.
  *
  * Pass `invitedUserId` to make it a private friend invite (only that
- * user can see/join, auto-cancels in 3 days). Omit for an open match
+ * user can see/join, auto-cancels in 24 hours). Omit for an open match
  * (anyone joins, auto-cancels in 7 days). expires_at is filled by the
  * sn_set_match_expiry trigger — we don't pass it.
  *
