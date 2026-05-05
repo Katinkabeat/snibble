@@ -18,6 +18,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { expireStaleMatches } from '../lib/matchActions.js'
 
+// Module-level throttle: at most one expire-sweep RPC every 5 minutes
+// per session. The sweep only matters when an OPEN match crosses its
+// expires_at boundary; visual incorrectness (a just-expired match still
+// showing as open) lasts at most until the next sweep — fine.
+let lastExpireSweepAt = 0
+const EXPIRE_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+
 export function useMatches(userId) {
   const [data, setData] = useState({
     invitedToYou: [],
@@ -37,10 +44,13 @@ export function useMatches(userId) {
     async function load() {
       setLoading(true)
       try {
-        // Lazy-sweep any open matches past their expires_at deadline before
-        // we read. Server-side function only updates rows that need it;
-        // this is cheap and keeps the lobby honest without a cron.
-        try { await expireStaleMatches() } catch { /* non-fatal */ }
+        // Lazy-sweep any open matches past their expires_at deadline,
+        // but throttled — every reload() click was firing this RPC and
+        // adding a network round-trip to every match-list refresh.
+        if (Date.now() - lastExpireSweepAt > EXPIRE_SWEEP_INTERVAL_MS) {
+          lastExpireSweepAt = Date.now()
+          try { await expireStaleMatches() } catch { /* non-fatal */ }
+        }
 
         const { data: matches, error: matchErr } = await supabase
           .from('sn_matches')
