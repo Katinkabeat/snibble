@@ -1,14 +1,18 @@
 // Supabase Edge Function: Snibble Push Notifications
 //
-// Three trigger types from DB:
-//   1. opponent_joined  — fires on sn_matches when opponent_id flips
-//                          null → not null. Notifies the match creator.
-//   2. round_submitted  — fires on every sn_match_round_plays insert.
-//                          Notifies the OTHER player (not the submitter).
-//                          If the match auto-completed with this insert,
+// Trigger / call types:
+//   1. opponent_joined  — DB trigger on sn_matches when opponent_id
+//                          flips null → not null. Notifies the creator.
+//   2. round_submitted  — DB trigger on every sn_match_round_plays
+//                          insert. Notifies the OTHER player. If the
+//                          match auto-completed with this insert,
 //                          appends "Match complete!" to the body.
-//   3. match_invited    — fires on sn_matches INSERT when invited_user_id
-//                          is set. Notifies the invitee.
+//   3. match_invited    — DB trigger on sn_matches INSERT when
+//                          invited_user_id is set. Notifies the invitee.
+//   4. nudge            — client POST after the sn_nudge RPC, which
+//                          enforces caller-in-match + caller-already-
+//                          submitted-this-round + 12h cooldown and
+//                          returns the target's user_id.
 //
 // Subscription fallback order: ['sidequest', 'snibble'] — most users
 // have opted into notifications via the SQ hub (app='sidequest'), so
@@ -117,6 +121,23 @@ serve(async (req: Request) => {
         body: `${inviterName} invited you to a match. Tap to play! 🍃`,
         tag: `snibble-invite-${record.id}`,
         url: `/snibble/?match=${record.id}`,
+        icon: '/snibble/favicon.svg',
+      })
+      return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
+    }
+
+    // ── nudge: client POST after sn_nudge RPC succeeds ──
+    if (payload.type === 'nudge') {
+      const { match_id, target_user_id, nudger_name } = payload
+      if (!match_id || !target_user_id) {
+        return new Response(JSON.stringify({ skipped: 'missing fields' }), { status: 200, headers: corsHeaders })
+      }
+
+      const result = await sendIfOptedIn(supabase, target_user_id, 'snibble', 'nudge', {
+        title: "Snibble — your turn!",
+        body: `${nudger_name || 'Someone'} is waiting on your round! 🔔`,
+        tag: `snibble-nudge-${match_id}`,
+        url: `/snibble/?match=${match_id}`,
         icon: '/snibble/favicon.svg',
       })
       return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
