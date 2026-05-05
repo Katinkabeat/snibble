@@ -482,6 +482,56 @@ sliding window simulation produced 0 repeats. Stress test in
 
 Commit `639da9f`.
 
+## 2026-05-04 session — perf sweep + invite deep-link fix
+
+Rae reported general SQ slowness, especially when inviting a friend
+to a Snibble match. Audited the codebase and shipped four fixes:
+
+**Invite deep-link regression (MatchView.jsx).** Push notifications
+deep-link to `/snibble/?match=<id>`, but MatchView had no branch for
+"current user is the invitee on an open match" — invitees saw the
+generic `OpenMatchPanel` ("waiting for someone to join from their
+lobby's match list") instead of being dropped into play. Added auto-
+accept: when `match.status === 'open' && match.invited_user_id ===
+user.id`, MatchView fires `joinMatch` once on mount (guarded by a
+ref) and refreshes. Brief "Accepting invite…" panel during the round
+trip. Commit `9efb386`.
+
+**createMatch parallelization (matchActions.js).** The rule-pair
+history RPC and the sn_matches insert had no dependency on each
+other — only the puzzle generation downstream needs both. Promise.all
+collapses one round-trip (~100-200ms). Confirmed by Rae as feeling
+"100x faster." Commit `b10464f`.
+
+**Pet load 2 queries → 1 (useActivePet.js).** Used PostgREST
+embedded-resource syntax to pull sn_progress + the related sn_pets
+catalog row in one trip:
+```js
+.from('sn_progress')
+.select(`*, sn_pets ( id, name, species, unlock_order, growth_required )`)
+```
+First-visit path (no progress row yet) still does two queries but
+parallelizes them. Commit `f748b8f`.
+
+**expireStaleMatches throttled (useMatches.js).** Every reload()
+click was firing the sweep RPC. Module-level throttle keeps it to
+once per 5 min per session. Worst-case visual lag (a just-expired
+match still appearing as open) is bounded by the interval — fine
+since the sweep is for stale matches nobody is interacting with.
+Commit `5f7e51b`.
+
+**NOTE on the "synchronous push trigger" red herring.** Initial
+audit flagged `sn_notify_match_invited` as a blocking HTTP POST in
+the AFTER-INSERT trigger. Wrong — `pg_net.net.http_post` is async by
+design (returns a request_id; the actual HTTP call runs in a
+background worker). The trigger does NOT block the INSERT. Real
+wins were the four above.
+
+**Indexes already covered.** Snibble migrations already index
+sn_progress.user_id, sn_matches.creator_id/opponent_id/invited_user_id,
+sn_matches.last_activity_at, sn_match_round_plays.user_id. No new
+indexes needed for Snibble specifically.
+
 ## Known gotchas
 
 - **Vite `import.meta.env.BASE_URL`** doesn't exist in Node. Test
