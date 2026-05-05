@@ -186,6 +186,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
               user={user}
               match={match}
               opponentName={opponentName}
+              myName={myName}
               myPlays={myPlays}
               theirPlays={theirPlays}
               rounds={rounds}
@@ -245,9 +246,11 @@ function OpenMatchPanel({ match }) {
   )
 }
 
-function WaitingForOpponentPanel({ user, match, opponentName, myPlays, theirPlays, rounds, onClaimed }) {
+function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, theirPlays, rounds, onClaimed }) {
   const totalRounds = rounds.length
   const [claiming, setClaiming] = useState(false)
+  const [nudging, setNudging] = useState(false)
+  const [justNudged, setJustNudged] = useState(false)
 
   // Stalled = match's last_activity_at older than 7 days. We use it
   // (not joined_at) so the clock resets every time anyone submits.
@@ -257,6 +260,15 @@ function WaitingForOpponentPanel({ user, match, opponentName, myPlays, theirPlay
   const ageDays = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24)
   const canClaim = ageDays >= 7
   const daysUntilClaim = Math.max(0, Math.ceil(7 - ageDays))
+
+  // Nudge: 12h cooldowns on both last_activity (don't nudge a fresh
+  // turn) and last_nudged_at (don't double-nudge). Server enforces
+  // these too; the UI just hides the button so users don't spam-tap.
+  const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000
+  const lastNudged = match.last_nudged_at ? new Date(match.last_nudged_at).getTime() : 0
+  const turnAge = Date.now() - lastActivity
+  const nudgeAge = Date.now() - lastNudged
+  const canNudge = !justNudged && turnAge > NUDGE_COOLDOWN_MS && nudgeAge > NUDGE_COOLDOWN_MS
 
   async function handleClaim() {
     if (claiming) return
@@ -270,6 +282,44 @@ function WaitingForOpponentPanel({ user, match, opponentName, myPlays, theirPlay
       toast.error(err.message || 'Failed to claim match')
     } finally {
       setClaiming(false)
+    }
+  }
+
+  async function handleNudge() {
+    if (nudging || !canNudge) return
+    setNudging(true)
+    try {
+      // Server-side cooldown + caller-must-have-submitted check, returns target uuid.
+      const { data: targetId, error } = await supabase.rpc('sn_nudge', { p_match_id: match.id })
+      if (error) throw error
+      if (!targetId) throw new Error('No opponent to nudge')
+
+      // Fire-and-forget push delivery.
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          type: 'nudge',
+          match_id: match.id,
+          target_user_id: targetId,
+          nudger_name: myName,
+        }),
+      }).catch((e) => console.warn('[sn nudge] push delivery failed', e))
+
+      setJustNudged(true)
+      toast.success('🔔 Reminder sent!')
+    } catch (err) {
+      const msg = err.message || String(err)
+      // Translate the RPC's error messages into nicer UI copy.
+      if (msg.includes('too fresh')) toast.error('Give them a chance — try again in a few hours.')
+      else if (msg.includes('already nudged')) toast.error('You already nudged recently.')
+      else toast.error(msg)
+    } finally {
+      setNudging(false)
     }
   }
 
@@ -293,9 +343,19 @@ function WaitingForOpponentPanel({ user, match, opponentName, myPlays, theirPlay
           >
             {claiming ? 'Claiming…' : `Claim win (${Math.floor(ageDays)} days inactive)`}
           </button>
+        ) : canNudge ? (
+          <button
+            onClick={handleNudge}
+            disabled={nudging}
+            className="mt-4 text-sm font-bold text-wordy-700 bg-white border-2 border-wordy-200 hover:border-wordy-400 px-3 py-1.5 rounded-lg disabled:opacity-50"
+          >
+            {nudging ? '…' : '🔔 Nudge opponent'}
+          </button>
         ) : (
           <p className="text-[11px] text-wordy-500 mt-3 italic">
-            You can claim the win after 7 days of inactivity (in {daysUntilClaim} day{daysUntilClaim === 1 ? '' : 's'}).
+            {justNudged
+              ? 'Reminder sent.'
+              : `You can nudge after 12 hours, or claim the win after 7 days (${daysUntilClaim} day${daysUntilClaim === 1 ? '' : 's'} left).`}
           </p>
         )}
       </div>
