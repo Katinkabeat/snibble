@@ -32,6 +32,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper: respect the recipient's notification prefs before sending.
+// Calls sq_notification_enabled(user, app, topic) — if false, skip
+// the send entirely. Fail-open on RPC error so a transient DB blip
+// doesn't break the platform.
+async function sendIfOptedIn(
+  supabase: any,
+  userId: string,
+  app: string,
+  topic: string,
+  payload: { title: string; body: string; tag: string; url: string; icon?: string }
+): Promise<{ sent: boolean; reason?: string; via?: string }> {
+  const { data: enabled, error } = await supabase.rpc('sq_notification_enabled', {
+    p_user_id: userId,
+    p_app: app,
+    p_topic: topic,
+  })
+  if (error) {
+    console.error('sq_notification_enabled failed (fail-open):', error)
+  } else if (enabled === false) {
+    return { sent: false, reason: 'opted out' }
+  }
+  return sendPushToUser(supabase, userId, payload)
+}
+
 async function sendPushToUser(
   supabase: any,
   userId: string,
@@ -88,7 +112,7 @@ serve(async (req: Request) => {
       }
 
       const inviterName = await getUsername(supabase, record.creator_id)
-      const result = await sendPushToUser(supabase, record.invited_user_id, {
+      const result = await sendIfOptedIn(supabase, record.invited_user_id, 'snibble', 'invite', {
         title: 'Snibble — match invite',
         body: `${inviterName} invited you to a match. Tap to play! 🍃`,
         tag: `snibble-invite-${record.id}`,
@@ -106,7 +130,7 @@ serve(async (req: Request) => {
       }
 
       const joinerName = await getUsername(supabase, record.opponent_id)
-      const result = await sendPushToUser(supabase, record.creator_id, {
+      const result = await sendIfOptedIn(supabase, record.creator_id, 'snibble', 'opponent_joined', {
         title: 'Snibble — opponent joined!',
         body: `${joinerName} joined your match. Time to play! 🍃`,
         tag: `snibble-join-${record.id}`,
@@ -162,7 +186,7 @@ serve(async (req: Request) => {
         body = `${submitterName} submitted their round.`
       }
 
-      const result = await sendPushToUser(supabase, recipientId, {
+      const result = await sendIfOptedIn(supabase, recipientId, 'snibble', 'your_turn', {
         title: matchComplete ? 'Snibble — match complete!' : 'Snibble — opponent played',
         body,
         tag: `snibble-play-${match.id}-${record.round_index}`,
