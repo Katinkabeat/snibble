@@ -69,19 +69,7 @@ export default function MultiplayerCard({ user, mine, onOpenMatch }) {
 
   return (
     <section className="card">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-display text-xl text-wordy-700">🎮 Two-Player Match</h2>
-        {mine.yourTurn.length > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-pink-200 text-pink-700 ring-1 ring-pink-300">
-            {mine.yourTurn.length} your turn
-          </span>
-        )}
-        {mine.invitedToYou.length > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-200 text-amber-800 ring-1 ring-amber-300">
-            {mine.invitedToYou.length} invite{mine.invitedToYou.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+      <h2 className="font-display text-xl text-wordy-700 mb-1">🎮 Two-Player Match</h2>
       <p className="text-sm text-wordy-600 mb-3">
         Same craving + same letters. Highest score wins.
       </p>
