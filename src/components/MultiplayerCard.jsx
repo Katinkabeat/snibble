@@ -126,8 +126,6 @@ export default function MultiplayerCard({ user, mine, onOpenMatch }) {
                 opponentName={isInvite ? (inviteeName ?? 'friend') : null}
                 youAreCreator
                 youHighlight
-                action="Resume"
-                onAction={() => onOpenMatch(m)}
                 statusText={
                   isInvite
                     ? `📨 Invited ${inviteeName ?? 'friend'}`
@@ -245,15 +243,17 @@ function MatchRow({
             ✕
           </button>
         )}
-        <button
-          onClick={onAction}
-          disabled={disabled}
-          className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all min-w-[5rem] disabled:opacity-50 ${
-            actionVariant === 'invite' ? 'btn-primary bg-amber-500 hover:bg-amber-600' : 'btn-primary'
-          }`}
-        >
-          {action}
-        </button>
+        {action && (
+          <button
+            onClick={onAction}
+            disabled={disabled}
+            className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all min-w-[5rem] disabled:opacity-50 ${
+              actionVariant === 'invite' ? 'btn-primary bg-amber-500 hover:bg-amber-600' : 'btn-primary'
+            }`}
+          >
+            {action}
+          </button>
+        )}
       </div>
     </div>
   )

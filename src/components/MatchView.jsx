@@ -77,6 +77,34 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   }, [matchId, user.id, reloadTick])
 
   const refresh = () => setReloadTick((t) => t + 1)
+
+  // Realtime — refresh when this match row changes (opponent joined,
+  // status flipped, completion) or when a play is inserted for this
+  // match (opponent submitted). Without this, the screen stays frozen
+  // until the user navigates away and back.
+  useEffect(() => {
+    if (!matchId) return
+    let pollInterval = null
+    const channel = supabase
+      .channel(`match_${matchId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sn_matches',
+          filter: `id=eq.${matchId}` }, refresh)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sn_match_round_plays',
+          filter: `match_id=eq.${matchId}` }, refresh)
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (!pollInterval) pollInterval = setInterval(refresh, 30000)
+        } else if (status === 'SUBSCRIBED' && pollInterval) {
+          clearInterval(pollInterval); pollInterval = null
+        }
+      })
+    return () => {
+      if (pollInterval) clearInterval(pollInterval)
+      supabase.removeChannel(channel)
+    }
+  }, [matchId])
   const otherProfile = match
     ? (match.creator_id === user.id ? opponent : creator)
     : null

@@ -189,6 +189,49 @@ export function useMatches(userId) {
     return () => { active = false }
   }, [userId, reloadTick])
 
+  // Realtime — refresh the lobby on any sn_matches row touching this
+  // user (created by, opponent, invited) and on any round-play insert
+  // for matches they're in. Mirrors Rungles' subscribeLobby pattern.
+  // Subscriptions on tables not in the supabase_realtime publication
+  // silently no-op — the sn_matches_realtime migration adds them.
+  useEffect(() => {
+    if (!userId) return
+    let pollInterval = null
+    let recountTimer = null
+    function scheduleReload() {
+      if (recountTimer) clearTimeout(recountTimer)
+      recountTimer = setTimeout(() => setReloadTick((t) => t + 1), 300)
+    }
+    const channel = supabase
+      .channel(`lobby_sn_matches_${userId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sn_matches',
+          filter: `creator_id=eq.${userId}` }, scheduleReload)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sn_matches',
+          filter: `opponent_id=eq.${userId}` }, scheduleReload)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sn_matches',
+          filter: `invited_user_id=eq.${userId}` }, scheduleReload)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sn_match_round_plays',
+          filter: `user_id=eq.${userId}` }, scheduleReload)
+      .subscribe((status) => {
+        // Fallback poll if the websocket dies — same belt-and-suspenders
+        // pattern the hub uses on LandingPage.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (!pollInterval) pollInterval = setInterval(scheduleReload, 60000)
+        } else if (status === 'SUBSCRIBED' && pollInterval) {
+          clearInterval(pollInterval); pollInterval = null
+        }
+      })
+    return () => {
+      if (recountTimer) clearTimeout(recountTimer)
+      if (pollInterval) clearInterval(pollInterval)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
   function reload() { setReloadTick((t) => t + 1) }
   return { ...data, loading, error, reload }
 }
