@@ -34,11 +34,15 @@ export function useActivePet(userId) {
     async function load() {
       setLoading(true)
       try {
-        // Find user's most recently-started ungraduated pet, OR fall back
-        // to seeding Mossy on first visit.
+        // One query via PostgREST embedded resource — pulls the user's
+        // current ungraduated pet AND its catalog row in a single round
+        // trip. Saves one network hop on every lobby mount.
         const { data: progressRows, error: progErr } = await supabase
           .from('sn_progress')
-          .select('user_id, pet_id, growth, graduated_at, started_at')
+          .select(`
+            user_id, pet_id, growth, graduated_at, started_at,
+            sn_pets ( id, name, species, unlock_order, growth_required )
+          `)
           .eq('user_id', userId)
           .is('graduated_at', null)
           .order('started_at', { ascending: false })
@@ -46,25 +50,24 @@ export function useActivePet(userId) {
         if (progErr) throw progErr
 
         let progressRow = progressRows && progressRows[0]
+        let petRow = progressRow?.sn_pets ?? null
 
-        // First-visit case — adopt Mossy.
+        // First-visit case — adopt Mossy. We need the pet row separately
+        // here since the insert doesn't embed and this is a rare path.
         if (!progressRow) {
-          const { data: inserted, error: insertErr } = await supabase
-            .from('sn_progress')
-            .insert({ user_id: userId, pet_id: STARTER_PET_ID, growth: 0 })
-            .select()
-            .single()
+          const [{ data: inserted, error: insertErr }, { data: starter, error: starterErr }] = await Promise.all([
+            supabase.from('sn_progress')
+              .insert({ user_id: userId, pet_id: STARTER_PET_ID, growth: 0 })
+              .select().single(),
+            supabase.from('sn_pets')
+              .select('id, name, species, unlock_order, growth_required')
+              .eq('id', STARTER_PET_ID).single(),
+          ])
           if (insertErr) throw insertErr
+          if (starterErr) throw starterErr
           progressRow = inserted
+          petRow = starter
         }
-
-        // Fetch the pet's catalog row for name/species/etc.
-        const { data: petRow, error: petErr } = await supabase
-          .from('sn_pets')
-          .select('id, name, species, unlock_order, growth_required')
-          .eq('id', progressRow.pet_id)
-          .single()
-        if (petErr) throw petErr
 
         if (!active) return
         setPetInfo({
