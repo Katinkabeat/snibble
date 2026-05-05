@@ -45,7 +45,15 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
             <p className="italic text-wordy-500">Finding your pet…</p>
           </div>
         ) : (
-          <div className="card p-5">
+          <div className="card p-5 relative">
+            {streak > 0 && (
+              <span
+                className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700 text-xs font-bold"
+                title={`${streak}-day streak`}
+              >
+                🔥 {streak}
+              </span>
+            )}
             <div className="flex items-center gap-4">
               <div className="w-24 h-24 shrink-0 bg-gradient-to-b from-pink-100 to-wordy-100 rounded-2xl border-2 border-wordy-300 grid place-items-center overflow-hidden">
                 {PetComponent && (
@@ -56,17 +64,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display text-2xl text-wordy-800 truncate">{petInfo.name}</h2>
-                  {streak > 0 && (
-                    <span
-                      className="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700 text-xs font-bold"
-                      title={`${streak}-day streak`}
-                    >
-                      Daily Streak 🔥 {streak}
-                    </span>
-                  )}
-                </div>
+                <h2 className="font-display text-2xl text-wordy-800 truncate">{petInfo.name}</h2>
                 <p className="text-xs text-wordy-500 capitalize">
                   {petInfo.species} · {petInfo.stage}
                 </p>
