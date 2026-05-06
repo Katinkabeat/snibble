@@ -289,7 +289,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
           {/* Action buttons under the rack: Feed, Clear, Shuffle, Done */}
           <div className="grid grid-cols-4 gap-1.5">
             <button
-              disabled={built.length < 3 || busy}
+              disabled={built.length < 4 || busy}
               onClick={handleFeed}
               className="btn-primary py-2.5 font-display text-sm disabled:opacity-50"
             >

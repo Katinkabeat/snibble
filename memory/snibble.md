@@ -607,3 +607,14 @@ Changes:
 
 Confirmed in preview: lobby renders, network queries 200, no console errors. No active best-of-3 matches in flight at time of change (Rae confirmed).
 
+
+### Session: 2026-05-06 — Match ties on equal scores
+
+Previously, equal total scores awarded the win to whichever player submitted their final round earlier (first-to-finish tiebreak via `submitted_at` query). Changed to a true tie: equal scores → `winner_id = null`.
+
+The UI already handled `winner_id === null` as "🤝 A tie!" (line 410 of `MatchView.jsx`), so no frontend changes needed. Only `submitMatchRound()` in `src/lib/matchActions.js` was modified — removed the `else` branch that queried `sn_match_round_plays.submitted_at` to pick the earlier submitter.
+
+Push notifications unaffected — the Edge Function just says "match complete!" without naming a winner.
+
+**Commit:** `d6ee069`.
+

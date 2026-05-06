@@ -740,7 +740,7 @@ function RoundPlayPanel({ user, match, round, opponentName, myName, totalRounds,
       <div className="grid grid-cols-4 gap-1.5">
         <button
           onClick={handleFeed}
-          disabled={busy || built.length < 3}
+          disabled={busy || built.length < 4}
           className="btn-primary text-sm font-display disabled:opacity-50"
         >
           Feed 🍃
