@@ -202,25 +202,10 @@ export async function submitMatchRound({ matchId, roundIndex, userId, wordsFed }
 
   if (!bothDone) return { complete: false, score }
 
-  // Decide winner: higher total wins. Ties go to whoever submitted last
-  // round earlier (matches the daily leaderboard tiebreak rule).
+  // Decide winner: higher total wins. Equal scores = tie (winner_id stays null).
   let winnerId = null
   if (creatorPlays.total > opponentPlays.total) winnerId = match.creator_id
   else if (opponentPlays.total > creatorPlays.total) winnerId = match.opponent_id
-  else {
-    // Tie — pick the player whose last submission was earlier. Pull
-    // submitted_at since the totals are equal.
-    const { data: lastPlays } = await supabase
-      .from('sn_match_round_plays')
-      .select('user_id, submitted_at')
-      .eq('match_id', matchId)
-      .order('submitted_at', { ascending: false })
-      .limit(2)
-    // The earlier of the two latest is the tiebreak winner.
-    if (lastPlays && lastPlays.length === 2) {
-      winnerId = lastPlays[1].user_id
-    }
-  }
 
   await supabase
     .from('sn_matches')
