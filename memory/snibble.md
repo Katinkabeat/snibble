@@ -618,3 +618,20 @@ Push notifications unaffected — the Edge Function just says "match complete!" 
 
 **Commit:** `d6ee069`.
 
+
+
+### Session: 2026-05-13 — Daily leaderboard privacy fix
+
+Onyi noticed she could see Rae's in-progress word list before Rae submitted her daily. `sn_daily_leaderboard` was `SECURITY DEFINER` and returned every row matching the date with no `is_complete` filter — score showed live on each row, and `words_fed` sat in the JSON payload (client-side `canSeeWords` gate only hid the expand UI, not the data).
+
+Fix in `supabase/migrations/sn_daily_leaderboard.sql`:
+- `where f.is_complete = true` on the returned rows → in-progress players don't appear on the leaderboard until they submit.
+- `exists (select 1 from sn_daily_feeds caller where caller.user_id = auth.uid() and caller.is_complete = true)` → non-submitted callers get zero rows (defense-in-depth — the existing client gate is no longer the only thing protecting submitted players' words).
+
+Applied to prod via Supabase Management API SQL endpoint (`POST /v1/projects/{ref}/database/query` with `SUPABASE_ACCESS_TOKEN`). Direct `db.*.supabase.co` host now returns only IPv6, so `psql` fails on networks without v6. The pooler URLs need explicit tenant-prefixed user (`postgres.<ref>`) which I didn't know without trial-and-error. Management API was the cleanest path.
+
+No frontend change. `useDailyLeaderboard` keeps working; `canSeeWords` UI gate is now redundant but harmless defense-in-depth.
+
+**Verified:** function source on prod matches via `pg_get_functiondef`; test account (incomplete) gets 0 rows; 3 real completed players today, 0 in-progress at time of fix.
+
+**Commit:** `070613b`.
