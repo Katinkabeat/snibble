@@ -101,7 +101,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
           {puzzleTeaser ? (
             <p className="text-sm text-wordy-600 mb-3">
               {petInfo?.name ?? 'Your pet'} wants{' '}
-              <span className="font-bold text-wordy-800">{puzzleTeaser.base.label}</span> today.
+              <span className="font-bold text-wordy-800">{puzzleTeaser.base.craving ?? puzzleTeaser.base.label}</span> today.
             </p>
           ) : (
             <p className="text-sm text-wordy-500 italic mb-3">Loading today's puzzle…</p>

@@ -147,7 +147,7 @@ export async function generatePuzzle(seedString) {
 
     return {
       seed: seedString,
-      base: { id: base.id, label: base.label, family: base.family },
+      base: { id: base.id, label: base.label, craving: base.craving, family: base.family },
       letters,
       totalSolutions,
       parCount,

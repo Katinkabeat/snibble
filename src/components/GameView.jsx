@@ -153,7 +153,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
         return
       }
       if (!baseRule.matches(word)) {
-        toast(`${petInfo.name} turns away — wants ${puzzle.base.label}`)
+        toast(`${petInfo.name} turns away — wants ${puzzle.base.craving ?? puzzle.base.label}`)
         return
       }
       const wordScore = scoreWord(word)
@@ -228,7 +228,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
           {/* Today's craving — single line above the pet */}
           <div className="mb-3 bg-gradient-to-br from-amber-200 to-amber-400 text-amber-900 border border-amber-500 rounded-2xl px-4 py-2 text-center shadow-tile">
             <p className="font-display text-base leading-tight">
-              {petInfo.name} is hungry for words that {puzzle.base.label}
+              {petInfo.name} is hungry for {puzzle.base.craving ?? `words that ${puzzle.base.label}`}
             </p>
           </div>
 
