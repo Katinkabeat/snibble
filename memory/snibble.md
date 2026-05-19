@@ -549,6 +549,18 @@ indexes needed for Snibble specifically.
   preference (no cross-game sync).
 
 
+### Session: 2026-05-19 — Stats modal → routed page (c92 polish round 2)
+
+Converted Snibble's stats from a modal (`<dialog>`-style overlay) to a full routed page, matching Yahdle's pattern.
+
+- **New `StatsPage.jsx`** uses `SQLobbyShell + SnibbleHeader + "← Back to lobby"`. Same chrome as Yahdle.
+- **Route:** `?view=stats` — added handler in App.jsx alongside `?view=sanctuary` etc.
+- **Avatar menu:** SnibbleAvatarMenu's "📊 Stats" item now pushState-navigates to `?view=stats` instead of opening the modal. Removed `statsOpen` state + StatsModal import.
+- **Post-"Done for today" flow:** GameView used to auto-pop the StatsModal after the player finishes the daily puzzle. Now it pushState-navigates to `?view=stats`. Player lands on the leaderboard page (unlocked, since they just submitted) and can navigate back via "← Back to lobby".
+- **Visual tokens** switched from `wordy-*` to neutral `white/N` classes (`bg-white/5`, `bg-white/15 ring-white/30`, `border-white/10`, `opacity-70`) so the page is pixel-identical to Yahdle's. Verified: row `background-color: rgba(255, 255, 255, 0.05)`, `color: rgb(237, 224, 255)` — matches Yahdle exactly.
+- **StatsModal.jsx deleted.** All its internals (LeaderboardTab, LeaderboardLocked, LeaderboardRow, SegmentedControl, DateStepper, MyStatsTab) now live in StatsPage with the new chrome.
+- Snibble-specific bits preserved on the page: play-to-see gate for Day+today, word-list expansion (Day tab + has-permission), percent vs. puzzle.totalSolutions for Day+today, "Test ← you" appended-rank row.
+
 ### Session: 2026-05-19 — Extended leaderboards (c92, second game shipped)
 
 Ported the c92 leaderboard pattern from Yahdle. Now Day / Week / Month / All-time, with a date stepper on the Day tab to scroll back through past days.

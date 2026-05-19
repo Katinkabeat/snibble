@@ -21,7 +21,6 @@ import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
-import StatsModal from './StatsModal.jsx'
 import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
 const MILESTONE_MARKS = [5, 10, 25, 50] // word-count milestones for toasts
@@ -96,7 +95,6 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
   const [busy, setBusy] = useState(false)
   const [chomping, setChomping] = useState(false)
   const [confirmingDone, setConfirmingDone] = useState(false)
-  const [showStats, setShowStats] = useState(false)
   const [trayLetters, setTrayLetters] = useState(() => [...puzzle.letters])
   const confirmTimerRef = useRef(null)
   const milestonesRef = useRef(new Set())
@@ -190,7 +188,10 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
     setConfirmingDone(false)
     await onMarkComplete()
     toast.success(`${petInfo.name} is full enough 🌙`)
-    setShowStats(true)
+    // Navigate to the full StatsPage (route-based, matching Yahdle/Rungles).
+    const newUrl = `${window.location.pathname}?view=stats${window.location.hash}`
+    window.history.pushState({}, '', newUrl)
+    window.dispatchEvent(new PopStateEvent('popstate'))
   }
 
   const PetComponent = PET_COMPONENTS[petInfo.petId] ?? PET_COMPONENTS.mossy
@@ -336,16 +337,6 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
             ))}
           </div>
         </div>
-      )}
-      {showStats && (
-        <StatsModal
-          user={user}
-          defaultTab="leaderboard"
-          onClose={() => {
-            setShowStats(false)
-            onBack()
-          }}
-        />
       )}
     </>
   )

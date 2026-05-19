@@ -1,10 +1,9 @@
 // ────────────────────────────────────────────────────────────
 //  SnibbleAvatarMenu — identity dropdown for Snibble.
 //
-//  Visual chrome (button, surface, identity card, menu item rows) is
-//  shared via sq-ui so Snibble's avatar menu matches Wordy/Rungles
-//  exactly. The Stats item opens StatsModal (Daily Leaderboard +
-//  My Stats tabs).
+//  Visual chrome shared via sq-ui so Snibble's avatar menu matches
+//  Wordy/Rungles. The Stats item navigates to /snibble/?view=stats
+//  (a full StatsPage), matching Yahdle's page-based pattern.
 // ────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
@@ -13,11 +12,16 @@ import {
   SQAvatarDropdown,
   SQAvatarMenuItem,
 } from '../../../rae-side-quest/packages/sq-ui/index.js'
-import StatsModal from './StatsModal.jsx'
 
-export default function SnibbleAvatarMenu({ profile, user }) {
+export default function SnibbleAvatarMenu({ profile }) {
   const [open, setOpen] = useState(false)
-  const [statsOpen, setStatsOpen] = useState(false)
+
+  function goToStats() {
+    setOpen(false)
+    const newUrl = `${window.location.pathname}?view=stats${window.location.hash}`
+    window.history.pushState({}, '', newUrl)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
 
   return (
     <div className="relative">
@@ -32,18 +36,10 @@ export default function SnibbleAvatarMenu({ profile, user }) {
         profile={profile}
         align="left"
       >
-        <SQAvatarMenuItem
-          onClick={() => {
-            setOpen(false)
-            setStatsOpen(true)
-          }}
-        >
+        <SQAvatarMenuItem onClick={goToStats}>
           📊 Stats
         </SQAvatarMenuItem>
       </SQAvatarDropdown>
-      {statsOpen && user && (
-        <StatsModal user={user} onClose={() => setStatsOpen(false)} />
-      )}
     </div>
   )
 }
