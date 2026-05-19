@@ -549,6 +549,26 @@ indexes needed for Snibble specifically.
   preference (no cross-game sync).
 
 
+### Session: 2026-05-19 — Extended leaderboards (c92, second game shipped)
+
+Ported the c92 leaderboard pattern from Yahdle. Now Day / Week / Month / All-time, with a date stepper on the Day tab to scroll back through past days.
+
+- **New RPCs** (additive — old `sn_daily_leaderboard` left alive for one deploy cycle):
+  - `sn_solo_leaderboard(p_timeframe text, p_date date default current_date)` — top 10 per window. Day: per-day score + `words_fed` array. Week/Month/All: SUM(score), SUM(words_count), `words_fed` null (no aggregate concat).
+  - `sn_solo_my_rank(p_timeframe, p_date)` — caller's rank/score.
+- **Play-to-see gate now contextual**, not whole-tab. Gate only triggers when viewing TODAY's Day tab (`p_date = (timezone('America/Halifax', now()))::date`). Past days and Week/Month/All-time are open to everyone, including users who haven't submitted today. Card c92 decision.
+- **Server is the source of truth for "today"** — RPC computes `v_today` from Halifax tz, no client flag. Cleaner contract.
+- **Migration** (no timestamp prefix per the standardized SQ convention, see [supabase patterns](../../.claude/projects/.../feedback_supabase_patterns.md)): `supabase/migrations/sn_extended_leaderboards.sql`. Applied via psql + pooler URL.
+- **Hook renamed** `useDailyLeaderboard` → `useSoloLeaderboard({ timeframe, date, currentUserId, todayIso })`. Returns `{ rows, myRank, locked, loading, error, reload }`. Empty Day-today result → `locked: true`. Percent vs. puzzle.totalSolutions only computed for Day+today (puzzle is today-specific). Other timeframes/days get `percent: null`.
+- **StatsModal redesign:**
+  - Tab label `🏆 Today` → `🏆 Leaderboard` (timeframe-aware now).
+  - Auto-switch to MyStats on no-submit removed — Leaderboard tab now has useful content (past days, aggregates) even when today is locked.
+  - LeaderboardLocked only shown for (Day + today + !submittedToday).
+  - Word expansion only shown for Day tab + rows with `wordsFed.length > 0` AND (past day OR submittedToday). For Today + submitted: see your own + others' words. For past days: see everyone's words always (per locked decision).
+  - Appended "your rank #N" row when caller is outside top 10 — fed by `sn_solo_my_rank`.
+- **Verified locally** via SQ All preview at `localhost:8080/snibble/`. Test user (not submitted today): Day-today shows lock, Day-yesterday shows Dino 122 / snuggie 117 / Rae 87 with word expansion, Week shows Dino 213 / Rae 161 / snuggie 117 (sums correct), Month/All-time include Test as rank 5 with 7 pts (naturally in top 10, no appended row needed). No console errors.
+- Raeban card [c92] still in flight (Rungles pending).
+
 ### Session: 2026-05-03 — Completed Matches: drop dismiss flow
 
 Mirrored Wordy/Rungles' completed-games fix to Snibble:

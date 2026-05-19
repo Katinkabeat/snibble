@@ -8,17 +8,51 @@
 //  Same pop-in animation as PetModal (cubic-bezier overshoot).
 // ────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from 'react'
-import { useDailyLeaderboard } from '../hooks/useDailyLeaderboard.js'
+import { useEffect, useMemo, useState } from 'react'
+import { useSoloLeaderboard } from '../hooks/useSoloLeaderboard.js'
 import { useMyStats } from '../hooks/useMyStats.js'
 import { supabase } from '../lib/supabase.js'
+
+const TIMEFRAMES = [
+  { key: 'day',   label: 'Day'      },
+  { key: 'week',  label: 'Week'     },
+  { key: 'month', label: 'Month'    },
+  { key: 'all',   label: 'All-time' },
+]
+
+const WINDOW_LABEL = {
+  week:  'This week (Mon–Sun)',
+  month: 'This month',
+  all:   'All-time, since launch',
+}
+
+// UTC formatter — iso strings here represent calendar dates, not
+// instants. Without timeZone: 'UTC', Atlantic clients render the
+// previous day.
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'UTC',
+  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+})
+
+function addDays(iso, n) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + n)
+  return dt.toISOString().slice(0, 10)
+}
+
+function formatIso(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return DATE_FMT.format(new Date(Date.UTC(y, m - 1, d)))
+}
 
 export default function StatsModal({ user, defaultTab = 'leaderboard', onClose }) {
   const [submittedToday, setSubmittedToday] = useState(null) // null=unknown
   const [tab, setTab] = useState(defaultTab)
   const [open, setOpen] = useState(false)
 
-  // Has the user submitted today's puzzle? Gates the leaderboard.
+  // Has the user submitted today's puzzle? Gates only the day-tab view
+  // of today; past days and Week/Month/All-time are always open.
   useEffect(() => {
     if (!user?.id) return
     let active = true
@@ -31,11 +65,7 @@ export default function StatsModal({ user, defaultTab = 'leaderboard', onClose }
       .maybeSingle()
       .then(({ data }) => {
         if (!active) return
-        const done = !!data?.is_complete
-        setSubmittedToday(done)
-        // If they haven't submitted, push them to My Stats so they
-        // don't see an unhelpful locked tab.
-        if (!done) setTab('mystats')
+        setSubmittedToday(!!data?.is_complete)
       })
     return () => { active = false }
   }, [user?.id])
@@ -76,7 +106,7 @@ export default function StatsModal({ user, defaultTab = 'leaderboard', onClose }
         {/* Tab bar */}
         <div className="flex border-b border-wordy-100 dark:border-[#2d1b55]">
           <TabButton active={tab === 'leaderboard'} onClick={() => setTab('leaderboard')}>
-            🏆 Today {submittedToday === false && <span className="text-xs">🔒</span>}
+            🏆 Leaderboard
           </TabButton>
           <TabButton active={tab === 'mystats'} onClick={() => setTab('mystats')}>
             📊 My Stats
@@ -85,9 +115,7 @@ export default function StatsModal({ user, defaultTab = 'leaderboard', onClose }
 
         <div className="flex-1 overflow-y-auto p-5">
           {tab === 'leaderboard' && (
-            submittedToday === false
-              ? <LeaderboardLocked />
-              : <LeaderboardTab user={user} canSeeWords={submittedToday === true} />
+            <LeaderboardTab user={user} submittedToday={submittedToday} />
           )}
           {tab === 'mystats' && <MyStatsTab user={user} />}
         </div>
@@ -125,9 +153,32 @@ function LeaderboardLocked() {
   )
 }
 
-function LeaderboardTab({ user, canSeeWords }) {
-  const { rows, loading, error } = useDailyLeaderboard(user.id)
+function LeaderboardTab({ user, submittedToday }) {
+  const today = useMemo(() => todayInHalifax(), [])
+  const [timeframe, setTimeframe] = useState('day')
+  const [activeDate, setActiveDate] = useState(today)
   const [expandedIds, setExpandedIds] = useState(() => new Set())
+
+  // Re-anchor date to today when leaving the Day tab so re-entry doesn't
+  // strand the user on a stale past day.
+  useEffect(() => {
+    if (timeframe !== 'day') setActiveDate(today)
+    setExpandedIds(new Set())
+  }, [timeframe, today])
+
+  const queryDate = timeframe === 'day' ? activeDate : today
+  const { rows, myRank, locked, loading, error } = useSoloLeaderboard({
+    timeframe,
+    date: queryDate,
+    currentUserId: user.id,
+    todayIso: today,
+  })
+
+  const isViewingToday = timeframe === 'day' && activeDate === today
+  const isToday = activeDate === today
+  // Word expansion only makes sense for the Day tab (aggregates have no
+  // per-row word list). For today's view, you must have submitted.
+  const canSeeWords = timeframe === 'day' && (!isViewingToday || submittedToday === true)
 
   function toggleExpanded(userId) {
     setExpandedIds((prev) => {
@@ -138,45 +189,149 @@ function LeaderboardTab({ user, canSeeWords }) {
     })
   }
 
-  if (loading) return <p className="italic text-wordy-500 text-center py-6">Loading…</p>
-  if (error) return <p className="text-rose-600 text-sm text-center py-6">{error}</p>
-  if (!rows.length) return (
-    <div className="text-center py-10">
-      <p className="text-3xl mb-2">🌱</p>
-      <p className="text-wordy-700 dark:text-wordy-200 font-display">No one's played yet today.</p>
-      <p className="text-xs text-wordy-500 mt-2">Be the first.</p>
-    </div>
-  )
+  const youInTop = rows.some(r => r.userId === user.id)
+  const showMyRankRow = !youInTop && myRank && myRank.rank > 10
 
   return (
-    <ol className="space-y-1.5">
-      {rows.map((row) => (
-        <LeaderboardRow
-          key={row.userId}
-          row={row}
-          expanded={expandedIds.has(row.userId)}
-          onToggle={() => toggleExpanded(row.userId)}
-          canSeeWords={canSeeWords}
+    <div className="space-y-4">
+      <SegmentedControl
+        options={TIMEFRAMES}
+        value={timeframe}
+        onChange={setTimeframe}
+      />
+
+      {timeframe === 'day' ? (
+        <DateStepper
+          isoDate={activeDate}
+          isToday={isToday}
+          onPrev={() => setActiveDate(addDays(activeDate, -1))}
+          onNext={() => !isToday && setActiveDate(addDays(activeDate, 1))}
         />
+      ) : (
+        <p className="text-center text-xs text-wordy-500 -mt-1">{WINDOW_LABEL[timeframe]}</p>
+      )}
+
+      {loading && <p className="italic text-wordy-500 text-center py-6">Loading…</p>}
+      {error && <p className="text-rose-600 text-sm text-center py-6">{error}</p>}
+
+      {!loading && !error && locked && <LeaderboardLocked />}
+
+      {!loading && !error && !locked && rows.length === 0 && (
+        <div className="text-center py-10">
+          <p className="text-3xl mb-2">🌱</p>
+          <p className="text-wordy-700 dark:text-wordy-200 font-display">
+            {timeframe === 'day'
+              ? (isToday ? "No one's played yet today." : "No plays recorded for this day.")
+              : "No plays in this window yet."}
+          </p>
+          {isViewingToday && <p className="text-xs text-wordy-500 mt-2">Be the first.</p>}
+        </div>
+      )}
+
+      {!loading && !error && !locked && rows.length > 0 && (
+        <ol className="space-y-1.5">
+          {rows.map((row) => (
+            <LeaderboardRow
+              key={row.userId}
+              row={row}
+              expanded={expandedIds.has(row.userId)}
+              onToggle={() => toggleExpanded(row.userId)}
+              canSeeWords={canSeeWords}
+            />
+          ))}
+          {showMyRankRow && (
+            <>
+              <li className="pt-2 text-center text-[10px] uppercase tracking-wider text-wordy-500 border-t border-wordy-100 dark:border-[#2d1b55] mt-2">
+                your rank
+              </li>
+              <LeaderboardRow
+                row={{
+                  rank: myRank.rank,
+                  userId: user.id,
+                  username: 'You',
+                  score: myRank.score,
+                  wordsCount: 0,
+                  wordsFed: [],
+                  percent: null,
+                  isYou: true,
+                }}
+                expanded={false}
+                onToggle={() => {}}
+                canSeeWords={false}
+              />
+            </>
+          )}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+function SegmentedControl({ options, value, onChange }) {
+  return (
+    <div className="flex gap-1 p-1 rounded-xl bg-wordy-50 dark:bg-[#1a1130] border border-wordy-100 dark:border-[#2d1b55]">
+      {options.map(opt => (
+        <button
+          key={opt.key}
+          onClick={() => onChange(opt.key)}
+          className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            value === opt.key
+              ? 'bg-white dark:bg-[#2d1b55] text-wordy-800 dark:text-wordy-100 ring-1 ring-wordy-300 dark:ring-wordy-700'
+              : 'text-wordy-500 hover:text-wordy-700 dark:hover:text-wordy-200'
+          }`}
+        >
+          {opt.label}
+        </button>
       ))}
-    </ol>
+    </div>
+  )
+}
+
+function DateStepper({ isoDate, isToday, onPrev, onNext }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-wordy-50 dark:bg-[#1a1130] border border-wordy-100 dark:border-[#2d1b55]">
+      <button
+        onClick={onPrev}
+        aria-label="Previous day"
+        className="w-8 h-8 rounded-lg bg-white dark:bg-[#2d1b55] text-wordy-700 dark:text-wordy-100 hover:bg-wordy-100 dark:hover:bg-[#3d2070]"
+      >
+        ‹
+      </button>
+      <div className="text-sm font-bold text-wordy-800 dark:text-wordy-100 flex items-center gap-2">
+        {formatIso(isoDate)}
+        {isToday && (
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500 text-white">
+            Today
+          </span>
+        )}
+      </div>
+      <button
+        onClick={onNext}
+        disabled={isToday}
+        aria-label="Next day"
+        className="w-8 h-8 rounded-lg bg-white dark:bg-[#2d1b55] text-wordy-700 dark:text-wordy-100 hover:bg-wordy-100 dark:hover:bg-[#3d2070] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-[#2d1b55]"
+      >
+        ›
+      </button>
+    </div>
   )
 }
 
 function LeaderboardRow({ row, expanded, onToggle, canSeeWords }) {
-  const isPerfect = row.percent >= 100
-  const sortedWords = [...row.wordsFed].sort((a, b) => a.localeCompare(b))
+  const isPerfect = row.percent != null && row.percent >= 100
+  const hasWords = canSeeWords && Array.isArray(row.wordsFed) && row.wordsFed.length > 0
+  const sortedWords = hasWords ? [...row.wordsFed].sort((a, b) => a.localeCompare(b)) : []
   return (
     <li>
       <button
-        onClick={canSeeWords ? onToggle : undefined}
+        onClick={hasWords ? onToggle : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors ${
           row.isYou
             ? 'bg-gradient-to-r from-wordy-100 to-pink-50 dark:from-[#2d1b55] dark:to-[#3d2070] ring-2 ring-wordy-400 dark:ring-wordy-600'
             : isPerfect
               ? 'bg-amber-50 dark:bg-[#2d1b55] hover:bg-amber-100'
               : 'hover:bg-wordy-50 dark:hover:bg-[#221540]'
-        } ${canSeeWords ? 'cursor-pointer' : 'cursor-default'}`}
+        } ${hasWords ? 'cursor-pointer' : 'cursor-default'}`}
       >
         <div className="w-7 text-center font-display text-sm text-wordy-700 dark:text-wordy-200">
           {medalForRank(row.rank)}
@@ -190,16 +345,19 @@ function LeaderboardRow({ row, expanded, onToggle, canSeeWords }) {
         </div>
         <div className="text-right shrink-0 flex items-center gap-2">
           <div className="font-display text-sm text-wordy-800 dark:text-wordy-100">
-            {row.score} pts <span className="text-wordy-500 font-normal">· {row.percent}%</span>
+            {row.score} pts
+            {row.percent != null && (
+              <span className="text-wordy-500 font-normal"> · {row.percent}%</span>
+            )}
           </div>
-          {canSeeWords && (
+          {hasWords && (
             <span className={`text-wordy-400 transition-transform ${expanded ? 'rotate-90' : ''}`}>
               ›
             </span>
           )}
         </div>
       </button>
-      {expanded && canSeeWords && (
+      {expanded && hasWords && (
         <div className="mt-1 mb-2 px-3 py-3 rounded-xl bg-wordy-50 dark:bg-[#1a1130]">
           <div className="text-[10px] uppercase tracking-wide text-wordy-500 mb-2">
             {sortedWords.length} word{sortedWords.length === 1 ? '' : 's'} fed
