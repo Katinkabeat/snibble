@@ -379,10 +379,7 @@ function LeaderboardRow({ row, expanded, onToggle, canSeeWords }) {
 }
 
 function medalForRank(rank) {
-  if (rank === 1) return '🥇'
-  if (rank === 2) return '🥈'
-  if (rank === 3) return '🥉'
-  return rank
+  return `#${rank}`
 }
 
 function MyStatsTab({ user }) {
