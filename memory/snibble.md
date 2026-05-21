@@ -564,11 +564,19 @@ Design discussion + numbers on Raeban card #127.
 Verified locally in daily + match against the live modules: BABOO/BATE
 now accepted, guard held across 80 seeds (max pool 50/49, 0 fails).
 
-**Latent issues found (not fixed):** (1) 17 of 93 rules can't fire —
-fewer than 12 common words match, so the picker silently skips them
-(mostly narrow suffixes: -OOK, -ABLE, -ICK, …). (2) `dictionary.js`
-header comment still says "4355 words" for the common list; it's
-actually ~32,639 (this file is correct).
+**Follow-ups (both fixed same day, commit 9b916fa):**
+- *17 "dead" rules.* Root cause was NOT too few common words (they have
+  25-233 each) — it's that a suffix locks several of the 7 tray slots,
+  so no single tray can spell 12 of the matching common words (best
+  achievable 5-11). Fix: per-rule `minSolutions` override (default 12)
+  set to 8 on rules that can reach 8, threaded into both generators'
+  anchor + solution-count gates. Revived 11 (EAR/ICK/OOK/IGHT/AIN/UNG
+  generate ~100% when picked; MENT/ITE/ORE/ABLE/NESS 29-77%). Dropped 6
+  that floor-8 still can't revive: OG/ARK/ALL/LESS/ICE (top out 5-7) +
+  EE (reachable but <10% gen). Pool 93 → 87. Verified: 0 daily failures
+  over 150 seeds, avg 5.7 attempts.
+- *Stale comment.* `dictionary.js` header said "4355 words"; corrected
+  to ~32,639 + clarified target-vs-acceptance split.
 
 ## Known gotchas
 
