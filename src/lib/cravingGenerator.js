@@ -104,6 +104,9 @@ export async function generatePuzzle(seedString) {
     attempt++
 
     const base = weightedPick(rng, BASE_RULES)
+    // Narrow rules (e.g. -ABLE, -OOK) can't seed 12 common words from one
+    // 7-letter tray, so they carry a lower per-rule floor.
+    const minSol = base.minSolutions ?? MIN_SOLUTIONS
 
     // Anchor words for tray construction — pull from common words so
     // the tray is biased toward producing common-word solutions.
@@ -115,16 +118,15 @@ export async function generatePuzzle(seedString) {
         if (anchors.length >= 30) break
       }
     }
-    if (anchors.length < MIN_SOLUTIONS) continue
+    if (anchors.length < minSol) continue
 
     const tryWords = rng.sample(anchors, Math.min(5, anchors.length))
     const letters = buildTray(rng, tryWords, TARGET_TRAY_SIZE)
     const rackSet = new Set(letters)
 
-    // Find every common-word solution that satisfies the rule AND is
-    // spellable. Rare TWL-only words are intentionally excluded from
-    // the puzzle — they're rejected on submit as "isn't a word" so
-    // the puzzle stays fair regardless of the player's vocabulary depth.
+    // Count common-word solutions (spellable + matching). This drives the
+    // par/100% target. Acceptance at submit time uses the full TWL list —
+    // these common solutions are just the bar the player fills to.
     const solutions = []
     for (const w of dictionary) {
       if (w.length < MIN_WORD_LENGTH) continue
@@ -135,7 +137,7 @@ export async function generatePuzzle(seedString) {
       if (solutions.length > MAX_SOLUTIONS + 1) break // early exit
     }
 
-    if (solutions.length < MIN_SOLUTIONS) continue
+    if (solutions.length < minSol) continue
     if (solutions.length > MAX_SOLUTIONS) continue
 
     // Full-dict guard: count every TWL word this tray would accept (not
@@ -226,6 +228,7 @@ export async function generateMatchPuzzle(seedString, options = {}) {
     const matcher = rule.matches
     const label = rule.label
     const family = rule.family
+    const minSol = rule.minSolutions ?? MATCH_MIN_SOLUTIONS
 
     // Anchor candidates from common words satisfying the rule.
     const anchors = []
@@ -236,7 +239,7 @@ export async function generateMatchPuzzle(seedString, options = {}) {
         if (anchors.length >= 40) break
       }
     }
-    if (anchors.length < MATCH_MIN_SOLUTIONS) continue
+    if (anchors.length < minSol) continue
 
     const tryWords = rng.sample(anchors, Math.min(5, anchors.length))
     const letters = buildTray(rng, tryWords, TARGET_TRAY_SIZE)
@@ -251,7 +254,7 @@ export async function generateMatchPuzzle(seedString, options = {}) {
       solutions.push(w)
       if (solutions.length > MATCH_MAX_SOLUTIONS + 1) break
     }
-    if (solutions.length < MATCH_MIN_SOLUTIONS) continue
+    if (solutions.length < minSol) continue
     if (solutions.length > MATCH_MAX_SOLUTIONS) continue
 
     // Full-dict guard (same as daily) — keep acceptance uniform across modes.

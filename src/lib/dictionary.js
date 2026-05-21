@@ -1,8 +1,9 @@
 // ────────────────────────────────────────────────────────────
-//  Word dictionaries — TWL Scrabble list (173,144 words) for
-//  validation, plus a "common words" list (top ~5000 most-frequent
-//  English words intersected with TWL → 4355 words) used to
-//  compute the daily par line.
+//  Word dictionaries — TWL Scrabble list (~173,145 words) for
+//  validation, plus a "common words" list (top ~50k Google English
+//  intersected with TWL → ~32,639 words) used to compute the daily
+//  par/target line. Feeds are validated against the full TWL list;
+//  the common list only bounds totalSolutions / par.
 // ────────────────────────────────────────────────────────────
 
 let wordSet = null

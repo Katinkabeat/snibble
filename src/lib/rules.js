@@ -37,49 +37,49 @@ function hasDoubleLetter(w) {
 // Weights deweighted (~halved) on 2026-04-30 because the suffix family
 // was dominating ~67% of daily picks under the previous balance. Goal
 // is ~40% of picks; contains/starts/special boosted to fill the gap.
+// minSolutions: narrow suffixes can't seed 12 common words spellable from a
+// single 7-letter tray (the suffix locks several slots). They pass at 8
+// instead. Genuinely-too-narrow suffixes were removed entirely: OG/ARK/ALL/
+// LESS/ICE (top out at 5-7 spellable) and EE (reachable but generates <10%
+// of picks even at floor 8). See card #127 / memory session log.
 const SUFFIXES = [
   // Common, friendly
   { suffix: 'OW',   weight: 3 },
   { suffix: 'AT',   weight: 3 },
   { suffix: 'IN',   weight: 3 },
-  { suffix: 'OG',   weight: 3 },
   { suffix: 'EN',   weight: 3 },
   { suffix: 'ED',   weight: 3, minWordLen: 4 }, // skip "ED" alone
   { suffix: 'ER',   weight: 3, minWordLen: 4 },
   { suffix: 'ING',  weight: 3 },
   { suffix: 'LY',   weight: 2, minWordLen: 4 },
-  { suffix: 'EAR',  weight: 2 },
-  { suffix: 'ICK',  weight: 2 },
-  { suffix: 'ALL',  weight: 2 },
+  { suffix: 'EAR',  weight: 2, minSolutions: 8 },
+  { suffix: 'ICK',  weight: 2, minSolutions: 8 },
   { suffix: 'EST',  weight: 2 },
-  { suffix: 'OOK',  weight: 2 },
-  { suffix: 'ARK',  weight: 2 },
-  { suffix: 'EE',   weight: 2 },
+  { suffix: 'OOK',  weight: 2, minSolutions: 8 },
   { suffix: 'Y',    weight: 2, minWordLen: 3 },
   // Slightly trickier
-  { suffix: 'IGHT', weight: 1 },
+  { suffix: 'IGHT', weight: 1, minSolutions: 8 },
   { suffix: 'ATE',  weight: 1 },
   { suffix: 'ION',  weight: 1 },
   // Long suffixes — naturally narrow, recognizable shapes
   { suffix: 'TION', weight: 2, minWordLen: 5 },
-  { suffix: 'ABLE', weight: 2, minWordLen: 5 },
-  { suffix: 'MENT', weight: 1, minWordLen: 5 },
-  { suffix: 'NESS', weight: 1, minWordLen: 5 },
-  { suffix: 'LESS', weight: 1, minWordLen: 5 },
+  { suffix: 'ABLE', weight: 2, minWordLen: 5, minSolutions: 8 },
+  { suffix: 'MENT', weight: 1, minWordLen: 5, minSolutions: 8 },
+  { suffix: 'NESS', weight: 1, minWordLen: 5, minSolutions: 8 },
   // 3-letter suffixes filling gaps
-  { suffix: 'ITE',  weight: 2, minWordLen: 4 },
-  { suffix: 'ORE',  weight: 2, minWordLen: 4 },
-  { suffix: 'AIN',  weight: 2, minWordLen: 4 },
-  { suffix: 'ICE',  weight: 2, minWordLen: 4 },
+  { suffix: 'ITE',  weight: 2, minWordLen: 4, minSolutions: 8 },
+  { suffix: 'ORE',  weight: 2, minWordLen: 4, minSolutions: 8 },
+  { suffix: 'AIN',  weight: 2, minWordLen: 4, minSolutions: 8 },
 ]
 
-const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3 }) => ({
+const suffixRules = SUFFIXES.map(({ suffix, weight, minWordLen = 3, minSolutions }) => ({
   id: `suffix:${suffix}`,
   family: 'suffix',
   label: `end in -${suffix}`,
   craving: `a word ending in -${suffix}`,
   matches: (w) => w.length >= minWordLen && w.endsWith(suffix),
   weight,
+  ...(minSolutions ? { minSolutions } : {}),
 }))
 
 // ───────── Contains rules ─────────
@@ -104,7 +104,7 @@ const CONTAINS = [
   { sub: 'ILL', weight: 3 },
   { sub: 'ANG', weight: 3 },
   { sub: 'ONG', weight: 2 },
-  { sub: 'UNG', weight: 2 },
+  { sub: 'UNG', weight: 2, minSolutions: 8 },
   { sub: 'IGH', weight: 3 },
   { sub: 'OUS', weight: 3 },
   { sub: 'TCH', weight: 2 },
@@ -112,13 +112,14 @@ const CONTAINS = [
   { sub: 'RGE', weight: 2 },
 ]
 
-const containsRules = CONTAINS.map(({ sub, weight }) => ({
+const containsRules = CONTAINS.map(({ sub, weight, minSolutions }) => ({
   id: `contains:${sub}`,
   family: 'contains',
   label: `contain -${sub}-`,
   craving: `a word with -${sub}-`,
   matches: (w) => w.length >= 3 && w.includes(sub),
   weight,
+  ...(minSolutions ? { minSolutions } : {}),
 }))
 
 // ───────── Starts-with rules ─────────
