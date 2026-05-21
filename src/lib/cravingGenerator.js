@@ -34,12 +34,20 @@
 
 import { rngFromSeed, dailySeedString } from './rng.js'
 import { BASE_RULES, weightedPick } from './rules.js'
-import { getDictionary, getCommonWordSet, isCommonWord } from './dictionary.js'
+import { getDictionary, getCommonWordSet, isValidWord } from './dictionary.js'
 
 const MIN_SOLUTIONS = 12
 const MAX_SOLUTIONS = 30
-const MAX_REGENERATIONS = 50
+// Bumped 50 → 150 alongside FULL_DICT_CAP: the cap rejects more trays, so
+// the generator needs a deeper budget to never hard-error (see card #127).
+const MAX_REGENERATIONS = 150
 const TARGET_TRAY_SIZE = 7
+
+// Ceiling on the full-TWL acceptable pool for a tray. Acceptance now uses
+// the whole Scrabble list (not just common words), so without this a broad
+// rule could accept 100+ obscure words. The par/100% target stays on the
+// common list; this only bounds the bonus pool. Modeled mean ~34/game.
+const FULL_DICT_CAP = 50
 
 // Shortest word a player can feed, in both daily and match play. The
 // solution count is filtered to this floor too, so par/100% reflect
@@ -129,6 +137,18 @@ export async function generatePuzzle(seedString) {
 
     if (solutions.length < MIN_SOLUTIONS) continue
     if (solutions.length > MAX_SOLUTIONS) continue
+
+    // Full-dict guard: count every TWL word this tray would accept (not
+    // just common ones) and reject the tray if it exceeds the cap. Run
+    // only after the common gate passes, so the full scan stays rare.
+    let fullCount = 0
+    for (const w of dictionary) {
+      if (w.length < MIN_WORD_LENGTH) continue
+      if (!base.matches(w)) continue
+      if (!spellableFrom(w, rackSet)) continue
+      if (++fullCount > FULL_DICT_CAP) break
+    }
+    if (fullCount > FULL_DICT_CAP) continue
 
     // Sort longest-first for nicer sample-solutions display in QA.
     solutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
@@ -234,6 +254,16 @@ export async function generateMatchPuzzle(seedString, options = {}) {
     if (solutions.length < MATCH_MIN_SOLUTIONS) continue
     if (solutions.length > MATCH_MAX_SOLUTIONS) continue
 
+    // Full-dict guard (same as daily) — keep acceptance uniform across modes.
+    let fullCount = 0
+    for (const w of dictionary) {
+      if (w.length < MIN_WORD_LENGTH) continue
+      if (!matcher(w)) continue
+      if (!spellableFrom(w, rackSet)) continue
+      if (++fullCount > FULL_DICT_CAP) break
+    }
+    if (fullCount > FULL_DICT_CAP) continue
+
     solutions.sort((a, b) => (b.length - a.length) || a.localeCompare(b))
     const totalSolutions = solutions.length
     const parCount = Math.ceil(totalSolutions * 0.6)
@@ -268,7 +298,7 @@ export function matchSeedString(matchId, roundIndex) {
  */
 export async function validateFeed(word, ruleMatcher) {
   const w = (word || '').toUpperCase().trim()
-  if (!(await isCommonWord(w))) return { ok: false, reason: 'not-a-word' }
+  if (!(await isValidWord(w))) return { ok: false, reason: 'not-a-word' }
   if (!ruleMatcher(w)) return { ok: false, reason: 'wrong-rule' }
   return { ok: true }
 }

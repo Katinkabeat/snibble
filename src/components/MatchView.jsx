@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase.js'
-import { isCommonWord } from '../lib/dictionary.js'
+import { isValidWord } from '../lib/dictionary.js'
 import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinMatch } from '../lib/matchActions.js'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
@@ -600,7 +600,7 @@ function RoundPlayPanel({ user, match, round, opponentName, myName, totalRounds,
         toast(`Already submitted "${word}"`)
         return
       }
-      if (!(await isCommonWord(word))) {
+      if (!(await isValidWord(word))) {
         toast.error(`"${word}" isn't a word`)
         return
       }

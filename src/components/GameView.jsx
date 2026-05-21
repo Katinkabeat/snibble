@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import { loadDailyPuzzle } from '../lib/dailyPuzzle.js'
-import { isCommonWord } from '../lib/dictionary.js'
+import { isValidWord } from '../lib/dictionary.js'
 import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
@@ -147,7 +147,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
         toast(`${petInfo.name} already ate that!`)
         return
       }
-      if (!(await isCommonWord(word))) {
+      if (!(await isValidWord(word))) {
         toast.error(`"${word}" isn't a word`)
         return
       }
