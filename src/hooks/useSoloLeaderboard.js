@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
+import { loadDailyPuzzle } from '../lib/dailyPuzzle.js'
 
 export function useSoloLeaderboard({ timeframe, date, currentUserId, todayIso }) {
   const [rows, setRows] = useState([])
@@ -34,7 +34,7 @@ export function useSoloLeaderboard({ timeframe, date, currentUserId, todayIso })
       try {
         // Percent vs. today's puzzle only makes sense for Day + today.
         const wantsPercent = timeframe === 'day' && date === todayIso
-        const puzzle = wantsPercent ? await generateTodaysPuzzle() : null
+        const puzzle = wantsPercent ? await loadDailyPuzzle() : null
 
         const [lbRes, rankRes] = await Promise.all([
           supabase.rpc('sn_solo_leaderboard', { p_timeframe: timeframe, p_date: date }),

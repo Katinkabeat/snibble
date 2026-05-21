@@ -69,7 +69,7 @@ export default function HowToPlayModal({ onClose }) {
 
           <Section title="🥕 What counts">
             <ul className="list-disc list-inside space-y-1 ml-1">
-              <li>3 letters or longer</li>
+              <li>4 letters or longer</li>
               <li>An everyday word (rare Scrabble-only words don't count)</li>
               <li>Has to fit today's craving</li>
             </ul>
@@ -81,7 +81,7 @@ export default function HowToPlayModal({ onClose }) {
 
           <Section title="📊 Scoring">
             <p>
-              <b>1 point per letter</b>. CAT = 3, GLOWING = 7. No fancy multipliers, so
+              <b>1 point per letter</b>. GROW = 4, GLOWING = 7. No fancy multipliers, so
               everyone's daily score is comparable no matter what letters today's craving lands on.
             </p>
             <p>
@@ -120,8 +120,8 @@ export default function HowToPlayModal({ onClose }) {
             </p>
             <p>
               Both players get the <b>same craving and same letters</b>. You play on your
-              own time — there's no clock. Match cravings combine two rules, so they're
-              a step harder than the daily.
+              own time — there's no clock. A match craving is one rule, just like the daily,
+              so it's the head-to-head that makes it exciting, not a harder puzzle.
             </p>
             <p>
               <b>Highest total score wins</b>. In best-of-3, each round reveals after you

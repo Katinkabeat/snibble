@@ -549,6 +549,20 @@ indexes needed for Snibble specifically.
   preference (no cross-game sync).
 
 
+### Session: 2026-05-20 — MP easing + 4-letter floor + persisted daily puzzles (c10)
+
+Three intertwined changes from card c10 ("decide multiplayer challenge level"):
+
+1. **Multiplayer easing.** Match rounds now pick a **single weighted rule** like the daily, not two AND-ed rules. The combined-rule + viable-pair machinery (`getViableRulePairs`, `MIN_PAIR_INTERSECTION`, `MAX_PAIR_OVERLAP_RATIO`, `combineRules`/`rulesAreRedundant` imports) was removed from `cravingGenerator.js`. `rulePairKey` stays (now keys single-rule history for dedup). `matcherFromBaseIds` already handled 1-element arrays, so DB + validation needed no change. The head-to-head is the challenge now, not the puzzle.
+
+2. **4-letter floor in BOTH modes.** Unified `MIN_WORD_LENGTH = 4` constant used by daily + match generators. Daily previously counted 2–3-letter words in `totalSolutions` but the Feed button blocks <4 — so the "you got them all" 100% clear was **unreachable on ~67% of days** (measured against HEAD over 730 seeds). Now the daily solution loop filters `w.length < MIN_WORD_LENGTH`, so par/100% only count feedable words. GameView handler guard aligned 3→4 (button was already 4). MatchView guard/button/toast 4. HowToPlay copy: "4 letters or longer", `GROW = 4` example, match section "one rule like the daily".
+
+3. **Persisted daily puzzles** (the durable fix Rae asked for). New table `sn_daily_puzzles` (puzzle_date PK, base_rule_ids, letters, total_solutions, par_count, difficulty) + SECURITY DEFINER RPC `sn_get_or_create_daily_puzzle` (insert-if-absent, date-guarded ±1 Atlantic day). New `lib/dailyPuzzle.js` `loadDailyPuzzle()`: SELECT-first, generate+RPC-store if absent, falls back to unpersisted local puzzle on RPC error. Replaced `generateTodaysPuzzle()` at all 3 call sites (GameView, LobbyView, useSoloLeaderboard). **Why:** the daily was recomputed live from the date seed every load, so any generator change silently re-rolled the in-progress day. Stored scores (`sn_daily_feeds.score`) were never affected — leaderboards sum stored facts — but the puzzle itself wasn't reproducible across a deploy. Now a generator change only affects days not yet started.
+
+**Deploy sequencing (important):** the migration + today's seed row MUST be applied before the new client deploys, else clients hit a missing table and the loader falls back to re-rolling today with the new generator. Migration was applied via the Supabase **dashboard SQL editor** (psql couldn't resolve the retired direct host `db.<ref>.supabase.co`; `.env.supabase` has the direct URL, not the pooler). Today (2026-05-20) was seeded with the live OLD puzzle (`suffix:IN` / `AIMETNS` / 12 / 8 / 3) so today stays untouched; tomorrow onward generates fresh under the new code.
+
+Verified: match generator stress test 100/100 single-rule; daily generator 730/730 seeds with 4-letter filter (12–30 solutions, no failures); `vite build` green. Live 2-player match feel + in-app daily load still want a human playtest (needs auth + opponent).
+
 ### Session: 2026-05-19 — Stats modal → routed page (c92 polish round 2)
 
 Converted Snibble's stats from a modal (`<dialog>`-style overlay) to a full routed page, matching Yahdle's pattern.

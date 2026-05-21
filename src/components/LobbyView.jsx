@@ -11,7 +11,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
-import { generateTodaysPuzzle } from '../lib/cravingGenerator.js'
+import { loadDailyPuzzle } from '../lib/dailyPuzzle.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useStreak } from '../hooks/useStreak.js'
 import { useMatches } from '../hooks/useMatches.js'
@@ -29,7 +29,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
 
   useEffect(() => {
     let active = true
-    generateTodaysPuzzle()
+    loadDailyPuzzle()
       .then((p) => active && setPuzzleTeaser(p))
       .catch(() => {})
     return () => { active = false }

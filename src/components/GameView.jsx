@@ -15,7 +15,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { generateTodaysPuzzle, scoreWord } from '../lib/cravingGenerator.js'
+import { scoreWord } from '../lib/cravingGenerator.js'
+import { loadDailyPuzzle } from '../lib/dailyPuzzle.js'
 import { isCommonWord } from '../lib/dictionary.js'
 import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
@@ -40,7 +41,7 @@ export default function GameView({ user, onBack }) {
 
   useEffect(() => {
     let active = true
-    generateTodaysPuzzle()
+    loadDailyPuzzle()
       .then((p) => active && setPuzzle(p))
       .catch((err) => active && setPuzzleErr(err.message || 'Failed to generate puzzle'))
     return () => { active = false }
@@ -139,7 +140,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
   async function handleFeed() {
     if (busy || isComplete) return
     const word = built.join('')
-    if (word.length < 3) return
+    if (word.length < 4) return
     setBusy(true)
     try {
       if (wordsFed.some((w) => w.word === word)) {
