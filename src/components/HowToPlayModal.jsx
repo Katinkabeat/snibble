@@ -70,7 +70,7 @@ export default function HowToPlayModal({ onClose }) {
           <Section title="🥕 What counts">
             <ul className="list-disc list-inside space-y-1 ml-1">
               <li>4 letters or longer</li>
-              <li>An everyday word (rare Scrabble-only words don't count)</li>
+              <li>Any real word in the Scrabble dictionary — common or unusual, they all count</li>
               <li>Has to fit today's craving</li>
             </ul>
             <p className="text-xs text-wordy-500 italic mt-2">
@@ -85,9 +85,10 @@ export default function HowToPlayModal({ onClose }) {
               everyone's daily score is comparable no matter what letters today's craving lands on.
             </p>
             <p>
-              The fullness bar fills as you feed. There's a <b>par tick</b> around 60%
-              — crossing it means you've fed your pet well today. Filling all the way
-              means you found every word.
+              The fullness bar fills as you feed, with a <b>par tick</b> around 60%
+              — crossing it means you've fed your pet well today. The bar is sized to
+              the <b>everyday words</b> for today's craving, but every valid word counts
+              toward it — so knowing an unusual one just gives you another way to fill it.
             </p>
           </Section>
 
@@ -115,21 +116,22 @@ export default function HowToPlayModal({ onClose }) {
 
           <Section title="🎮 Two-player match">
             <p>
-              Tap <b>Start a match</b> on the lobby. Pick <b>Single round</b> or <b>Best of 3</b>,
-              and your match goes into the public list. Anyone signed in can join.
+              Tap <b>Start a match</b> on the lobby. Make it <b>🌍 Open</b> (anyone signed
+              in can join from their lobby) or play <b>👥 With a friend</b> (only the friend
+              you pick can join).
             </p>
             <p>
-              Both players get the <b>same craving and same letters</b>. You play on your
-              own time — there's no clock. A match craving is one rule, just like the daily,
-              so it's the head-to-head that makes it exciting, not a harder puzzle.
+              Both players get the <b>same craving and same letters</b>, and it's a
+              <b> single round</b> — one rule, just like the daily, so it's the head-to-head
+              that makes it exciting, not a harder puzzle. You play on your own time, no clock.
             </p>
             <p>
-              <b>Highest total score wins</b>. In best-of-3, each round reveals after you
-              submit the previous one, and you'll see your opponent's score per round once
-              you've both locked in.
+              <b>Highest total score wins.</b> You'll see your opponent's score once you've
+              both submitted.
             </p>
             <p className="text-xs text-wordy-500 italic">
-              If your opponent goes quiet for 7 days, you can claim the win from the match screen.
+              Open matches auto-cancel after 7 days, friend invites after 24 hours if unaccepted.
+              If your opponent goes quiet, you can claim the win from the match screen.
             </p>
           </Section>
 
