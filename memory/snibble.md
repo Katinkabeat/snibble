@@ -94,7 +94,7 @@ Functions:
   puzzle out (verified by `scripts/test-determinism.mjs`).
 - Match seeds (v2) will use the same RNG with `snibble:match:<id>` seeds.
 
-## Generator (v2 — phaseless, common-words-only)
+## Generator (v2 — phaseless; common-words *target*, full-TWL *acceptance*)
 
 Single rule per day. Output:
 
@@ -110,18 +110,25 @@ Single rule per day. Output:
 }
 ```
 
-**Solvability bounds:** regenerates up to 50× until
+**Solvability bounds:** regenerates up to 150× (was 50; bumped
+2026-05-21 for the full-dict guard below) until
 `12 ≤ totalSolutions ≤ 30`. Both bounds enforced. Anchor words for
 the tray are pulled from common-words only so the tray biases toward
 producing common-word solutions instead of being dominated by
 rare-letter pulls.
 
-**Solutions are common-words only.** Rare TWL words (ETUI, OBIA,
-OILILY, OAT-rank-32k tier) are intentionally excluded — they're
-rejected on submit as "isn't a word" so the puzzle stays fair
-regardless of the player's vocabulary depth. Decision rationale: a
-sample puzzle hit 554 valid TWL words against the old loose model;
-common-words-only typically lands at 15–25.
+**Target vs acceptance are decoupled (changed 2026-05-21).**
+`totalSolutions` / par / 100% are still computed from common-words
+only (so the bar fills at ~12–30). But feeds are now *accepted*
+against the full TWL list (`isValidWord`, 173k) — a player who knows
+a real but uncommon word (ETUI, BABOO, BATE) gets it in as bonus
+instead of being told "isn't a word". To keep the acceptable pool
+bounded, generation applies a `FULL_DICT_CAP = 50` guard: after the
+common gate passes, count every TWL word the tray would accept and
+regenerate if > 50. Modeled mean ~34 acceptable/game, hard max 50.
+Same guard + acceptance in `generateMatchPuzzle` so daily and match
+are uniform. (Old behavior: common-only acceptance, rejecting all
+rare TWL words — that's what players complained about.)
 
 Rule families weighted (in `rules.js`):
 - Suffix (-OW, -AT, -IN, -OG, -EN, -ED, -ER, -ING, -LY, -EAR, -ICK,
@@ -531,6 +538,37 @@ wins were the four above.
 sn_progress.user_id, sn_matches.creator_id/opponent_id/invited_user_id,
 sn_matches.last_activity_at, sn_match_round_plays.user_id. No new
 indexes needed for Snibble specifically.
+
+## 2026-05-21 session — full-TWL acceptance + ≤50 guard
+
+Player complaint (via a Snibble player): real words they know get
+rejected. Root cause: feeds were validated against common-words only.
+
+Fix (commit d4788b3, shipped): decouple acceptance from the target.
+- `GameView.jsx` + `MatchView.jsx`: feed gate `isCommonWord` →
+  `isValidWord` (full TWL). `validateFeed` in cravingGenerator.js too.
+- `cravingGenerator.js`: added `FULL_DICT_CAP = 50` guard to both
+  `generatePuzzle` and `generateMatchPuzzle` (count full-TWL feedable
+  words after the common gate; regenerate if > 50).
+- `MAX_REGENERATIONS` 50 → 150 so the guard never hard-errors.
+
+Modeling (3,000 simulated days, real generator logic): uncapped mean
+~45 (outliers to 158); ≤50 guard → mean ~34, hard max 50, ~7 regen
+attempts avg, 0 failures. Rejected alternatives: ≤60 cap (16% over
+50), dropping the 6 broad rules (whack-a-mole, barely moved avg), and
+2-rule cravings for daily/match (intersection barely lowers count,
+~52 regen attempts, makes the cozy daily harder — not a word-count
+lever). Decision: single rule in BOTH modes, uniform acceptance.
+Design discussion + numbers on Raeban card #127.
+
+Verified locally in daily + match against the live modules: BABOO/BATE
+now accepted, guard held across 80 seeds (max pool 50/49, 0 fails).
+
+**Latent issues found (not fixed):** (1) 17 of 93 rules can't fire —
+fewer than 12 common words match, so the picker silently skips them
+(mostly narrow suffixes: -OOK, -ABLE, -ICK, …). (2) `dictionary.js`
+header comment still says "4355 words" for the common list; it's
+actually ~32,639 (this file is correct).
 
 ## Known gotchas
 
