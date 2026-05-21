@@ -70,7 +70,7 @@ export default function HowToPlayModal({ onClose }) {
           <Section title="🥕 What counts">
             <ul className="list-disc list-inside space-y-1 ml-1">
               <li>4 letters or longer</li>
-              <li>Any real word in the Scrabble dictionary — common or unusual, they all count</li>
+              <li>Any real word in the dictionary — common or unusual, they all count</li>
               <li>Has to fit today's craving</li>
             </ul>
             <p className="text-xs text-wordy-500 italic mt-2">
