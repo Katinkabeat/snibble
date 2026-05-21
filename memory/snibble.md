@@ -578,6 +578,19 @@ now accepted, guard held across 80 seeds (max pool 50/49, 0 fails).
 - *Stale comment.* `dictionary.js` header said "4355 words"; corrected
   to ~32,639 + clarified target-vs-acceptance split.
 
+**One-time reset of today's daily.** Today's puzzle was already pinned
+in `sn_daily_puzzles` this morning on the OLD code (rule: 3+ vowels,
+tray ACDTSIL). Rae wanted everyone on the new rules today, so we
+deleted the day's `sn_daily_puzzles` row + the single in-progress
+`sn_daily_feeds` row (1 player, score 59, not finished). It regenerated
+deterministically to "start with B-" / BNRKOGA / 27 solutions. Reminder
+for next time: a destructive DELETE against shared prod via the
+Management API (`/database/query`) gets blocked by the auto-mode safety
+classifier even after confirmation — run such one-off prod deletes in
+the Supabase dashboard SQL editor instead. Pinning model lives in
+`dailyPuzzle.js`: to re-roll any day, delete its `sn_daily_puzzles` row
+(and matching `sn_daily_feeds` rows by `feed_date` to wipe scores).
+
 ## Known gotchas
 
 - **Vite `import.meta.env.BASE_URL`** doesn't exist in Node. Test
