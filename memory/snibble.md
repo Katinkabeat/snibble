@@ -740,3 +740,42 @@ No frontend change. `useDailyLeaderboard` keeps working; `canSeeWords` UI gate i
 **Verified:** function source on prod matches via `pg_get_functiondef`; test account (incomplete) gets 0 rows; 3 real completed players today, 0 in-progress at time of fix.
 
 **Commit:** `070613b`.
+
+### Session: 2026-05-23 — Atomic match-round submission (half-commit hardening)
+
+Spun out of the Wordy half-commit bug Onyi reported (Wordy did two separate
+client UPDATEs in a Promise.all; one half failing corrupted the game). Audited
+all SQ games for the same pattern: Rungles + Yahdle already use single RPCs
+(safe); Snibble's `submitMatchRound` was the exception — it did an INSERT into
+`sn_match_round_plays`, then a separate `sn_matches` UPDATE (last_activity_at),
+then a completion UPDATE (status/winner_id). If the insert landed but a
+follow-up update failed, a match could stick (round recorded but never marked
+completed). Lower severity than Wordy (no scores/tiles to corrupt), same class.
+
+**Fix:** new SECURITY DEFINER RPC `sn_submit_match_round(p_match_id, p_round_index,
+p_words_fed, p_score)` in `supabase/migrations/sn_submit_match_round_atomic.sql`
+(applied to shared prod via pooler/psql — `postgres.<ref>` user on
+`aws-0-us-west-2.pooler.supabase.com:5432`, which works fine; the old IPv6 note
+above is moot for DDL). It locks the match `FOR UPDATE`, records the play, touches
+last_activity_at, counts rounds from `sn_match_rounds` (not the hardcoded
+`total=1` — handles best_of_3 if ever revived), and on both-done computes the
+winner + flips to completed — all one transaction. Running as definer also lets
+the completion check see both players' plays (read RLS hides the opponent's rows
+pre-submit). The PK `(match_id, round_index, user_id)` blocks a resubmit; the RPC
+catches that `unique_violation` and re-raises a friendly "You already submitted
+this round." so a retry-after-success rejects cleanly instead of erroring ugly.
+
+Client: `submitMatchRound` in `src/lib/matchActions.js` is now a thin RPC call
+(dropped the `userId` param — the RPC uses `auth.uid()`); the `MatchView.jsx`
+call site stopped passing `userId`. Return shape unchanged
+(`{ complete, score, winnerId }`).
+
+**Verified at data layer** (all rolled back, simulated both players via
+`request.jwt.claims`): happy path — first submit `complete=false`, second flips
+`complete=true` with the right winner and the match row goes `completed` +
+`completed_at` + `winner_id`. Guards: duplicate → "You already submitted this
+round."; non-active match → "Match is not active"; no JWT → "not authenticated".
+`npm run build` clean. Authed in-app flow not E2E'd (no test creds) — same
+constraint as always.
+
+See cross-game auto-memory `feedback_sq_atomic_move_writes`. Raeban card #130.

@@ -138,85 +138,28 @@ export async function joinMatch({ matchId, userId }) {
 }
 
 /**
- * Submit a player's words for a single round of a match. Computes
- * the score from the word list (flat per-letter, same as daily).
+ * Submit a player's words for a single round of a match. Computes the
+ * score from the word list (flat per-letter, same as daily), then hands
+ * the whole submission to an atomic SECURITY DEFINER RPC.
  *
- * After insert, checks whether both players have now submitted ALL
- * rounds of the match — if so, declares the winner and flips the
- * match to 'completed'.
+ * The RPC records the play, touches last_activity_at, and — if both
+ * players have now submitted every round — declares the winner and flips
+ * the match to 'completed', all in one transaction. Doing it as separate
+ * client writes (the old approach) could half-commit and leave a match
+ * stuck (round recorded but never completed).
  */
-export async function submitMatchRound({ matchId, roundIndex, userId, wordsFed }) {
+export async function submitMatchRound({ matchId, roundIndex, wordsFed }) {
   const score = wordsFed.reduce((s, w) => s + scoreWord(w), 0)
 
-  const { error: insertErr } = await supabase
-    .from('sn_match_round_plays')
-    .insert({
-      match_id: matchId,
-      round_index: roundIndex,
-      user_id: userId,
-      words_fed: wordsFed,
-      score,
-    })
-  if (insertErr) throw insertErr
+  const { data, error } = await supabase.rpc('sn_submit_match_round', {
+    p_match_id: matchId,
+    p_round_index: roundIndex,
+    p_words_fed: wordsFed,
+    p_score: score,
+  })
+  if (error) throw error
 
-  // Always touch last_activity_at so the auto-resolve clock resets.
-  await supabase
-    .from('sn_matches')
-    .update({ last_activity_at: new Date().toISOString() })
-    .eq('id', matchId)
-
-  // Check completion: do BOTH players have plays for every round?
-  const { data: match } = await supabase
-    .from('sn_matches')
-    .select('creator_id, opponent_id, status')
-    .eq('id', matchId)
-    .single()
-  if (!match || match.status === 'completed') return { complete: false, score }
-
-  const total = 1
-
-  // sn_match_round_plays RLS lets each player see their own + opponent's
-  // (after both submit a given round). For the "are we done" check we
-  // only need our own submission count and to verify opponent has the
-  // same — but RLS may hide opponent rows on rounds where we haven't
-  // submitted. Workaround: count distinct users with row counts.
-  const { data: plays } = await supabase
-    .from('sn_match_round_plays')
-    .select('user_id, round_index, score')
-    .eq('match_id', matchId)
-
-  const byUser = new Map()
-  for (const p of plays ?? []) {
-    const sums = byUser.get(p.user_id) ?? { rounds: new Set(), total: 0 }
-    sums.rounds.add(p.round_index)
-    sums.total += p.score
-    byUser.set(p.user_id, sums)
-  }
-
-  const creatorPlays = byUser.get(match.creator_id)
-  const opponentPlays = match.opponent_id ? byUser.get(match.opponent_id) : null
-  const bothDone =
-    creatorPlays && opponentPlays &&
-    creatorPlays.rounds.size === total &&
-    opponentPlays.rounds.size === total
-
-  if (!bothDone) return { complete: false, score }
-
-  // Decide winner: higher total wins. Equal scores = tie (winner_id stays null).
-  let winnerId = null
-  if (creatorPlays.total > opponentPlays.total) winnerId = match.creator_id
-  else if (opponentPlays.total > creatorPlays.total) winnerId = match.opponent_id
-
-  await supabase
-    .from('sn_matches')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      winner_id: winnerId,
-    })
-    .eq('id', matchId)
-
-  return { complete: true, score, winnerId }
+  return { complete: data.complete, score: data.score, winnerId: data.winner_id }
 }
 
 /**

@@ -635,7 +635,6 @@ function RoundPlayPanel({ user, match, round, opponentName, myName, totalRounds,
       const result = await submitMatchRound({
         matchId: match.id,
         roundIndex: round.round_index,
-        userId: user.id,
         wordsFed,
       })
       if (result.complete) {
