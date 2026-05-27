@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { SQReportPlayer } from '../../../rae-side-quest/packages/sq-ui/index.js'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import toast from 'react-hot-toast'
 import HowToPlayModal from './HowToPlayModal.jsx'
@@ -205,6 +206,9 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
           </div>
         </>
       )}
+
+      {/* Report a player */}
+      <SQReportPlayer supabase={supabase} game="snibble" />
 
       {/* Log out — rose, always last. */}
       <div className="settings-row">
