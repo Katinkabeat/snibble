@@ -109,6 +109,16 @@ export async function cancelMatch({ matchId }) {
 }
 
 /**
+ * Decline an invite to an open match. Server enforces the caller is the
+ * invited user of an 'open' match, then closes it with
+ * close_reason='Invite declined'.
+ */
+export async function declineInvite({ matchId }) {
+  const { error } = await supabase.rpc('sn_decline_invite', { p_match_id: matchId })
+  if (error) throw error
+}
+
+/**
  * Sweeps any past-expiry open matches to status='expired'. Safe to
  * call from anywhere — server-side function only updates rows that
  * are actually past their deadline.

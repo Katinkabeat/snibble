@@ -19,13 +19,14 @@
 import toast from 'react-hot-toast'
 import { useState } from 'react'
 import { useOpenMatches } from '../hooks/useMatches.js'
-import { joinMatch, cancelMatch } from '../lib/matchActions.js'
+import { joinMatch, cancelMatch, declineInvite } from '../lib/matchActions.js'
 import CreateMatchSheet from './CreateMatchSheet.jsx'
 
 export default function MultiplayerCard({ user, mine, onOpenMatch }) {
   const others = useOpenMatches(user.id)
   const [joiningId, setJoiningId] = useState(null)
   const [cancellingId, setCancellingId] = useState(null)
+  const [decliningId, setDecliningId] = useState(null)
   const [showSheet, setShowSheet] = useState(false)
 
   const mineRowCount =
@@ -48,6 +49,22 @@ export default function MultiplayerCard({ user, mine, onOpenMatch }) {
       others.reload()
     } finally {
       setJoiningId(null)
+    }
+  }
+
+  async function handleDecline(match) {
+    if (decliningId) return
+    if (!confirm('Decline this invite?')) return
+    setDecliningId(match.id)
+    try {
+      await declineInvite({ matchId: match.id })
+      toast.success('Invite declined.')
+      mine.reload()
+    } catch (err) {
+      console.error('[declineInvite] failed', err)
+      toast.error(err.message || 'Failed to decline invite')
+    } finally {
+      setDecliningId(null)
     }
   }
 
@@ -101,6 +118,8 @@ export default function MultiplayerCard({ user, mine, onOpenMatch }) {
               onAction={() => handleJoin(m)}
               statusText={`📨 ${m.opponent?.username ?? 'A friend'} invited you`}
               actionVariant="invite"
+              onDecline={() => handleDecline(m)}
+              declineDisabled={decliningId === m.id}
             />
           ))}
 
@@ -195,6 +214,8 @@ function MatchRow({
   statusText,
   onCancel,
   cancelDisabled,
+  onDecline,
+  declineDisabled,
   actionVariant,
 }) {
   return (
@@ -227,6 +248,17 @@ function MatchRow({
             className="w-7 h-7 grid place-items-center rounded-full text-wordy-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 transition-colors"
             aria-label="Cancel match"
             title="Cancel match"
+          >
+            ✕
+          </button>
+        )}
+        {onDecline && (
+          <button
+            onClick={onDecline}
+            disabled={declineDisabled}
+            className="w-7 h-7 grid place-items-center rounded-full text-wordy-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 transition-colors"
+            aria-label="Decline invite"
+            title="Decline invite"
           >
             ✕
           </button>
