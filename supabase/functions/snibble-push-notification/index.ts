@@ -143,6 +143,25 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
     }
 
+    // ── invite_declined (from sn_decline_invite RPC) ───────────
+    // Snibble invites are 1v1, so a decline always closes the match.
+    // Gated by the creator's 'invite_declined' pref (default OFF).
+    if (payload.type === 'invite_declined') {
+      const { match_id, creator_id, decliner_id } = payload
+      if (!creator_id) {
+        return new Response(JSON.stringify({ skipped: 'no creator' }), { status: 200, headers: corsHeaders })
+      }
+      const declinerName = decliner_id ? await getUsername(supabase, decliner_id) : 'A friend'
+      const result = await sendIfOptedIn(supabase, creator_id, 'snibble', 'invite_declined', {
+        title: 'Snibble',
+        body: `${declinerName} couldn’t join this round. Tap to start another. 🍃`,
+        tag: `snibble-declined-${match_id}`,
+        url: `/snibble/`,
+        icon: '/snibble/favicon.svg',
+      })
+      return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
+    }
+
     // ── opponent_joined: sn_matches UPDATE, opponent_id null → set ──
     if (payload.type === 'opponent_joined') {
       const { record } = payload
