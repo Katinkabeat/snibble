@@ -779,3 +779,7 @@ round."; non-active match → "Match is not active"; no JWT → "not authenticat
 constraint as always.
 
 See cross-game auto-memory `feedback_sq_atomic_move_writes`. Raeban card #130.
+
+## 2026-05-31 — Decline-invite + opt-in decline-notify (c167/c172)
+
+Added a decline (x) button to incoming invites (MatchRow) + `sn_decline_invite` SECURITY DEFINER RPC (supabase/migrations/sn_matches_decline_invite.sql). Snibble invites are 1v1, so a decline always closes the match (close_reason='Invite declined'). Phase 2 (sn_matches_decline_notify.sql): the RPC net.http_post's an 'invite_declined' push to snibble-push-notification edge fn, gated by the new per-game 'invite_declined' notif topic (default OFF, opt-in in hub NotificationsPanel). Edge fn handles the type via sendIfOptedIn. Verified via rolled-back impersonation test + live smoke test on deployed fn. Authed device-side push NOT E2E'd — Rae to confirm.
