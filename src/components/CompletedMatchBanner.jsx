@@ -14,12 +14,18 @@ export default function CompletedMatchBanner({ matches, onView }) {
 
 function BannerRow({ match, onView }) {
   const opponentName = match.opponent?.username ?? 'them'
-  const headline = match.closed_by_admin
-    ? '🛑 Match closed by admin'
-    : match.winner_id
-      ? (match.youWon ? '🏆 You won!' : `🌙 ${opponentName} won`)
-      : "🤝 It's a tie!"
-  const subtext = `You ${match.yourScore ?? 0} · ${opponentName} ${match.theirScore ?? 0}`
+  // Invite expired before anyone joined (c151) — never started, no scores.
+  const isExpired = match.status === 'expired' && !match.closed_by_admin
+  const headline = isExpired
+    ? '🚫 Match closed'
+    : match.closed_by_admin
+      ? '🛑 Match closed by admin'
+      : match.winner_id
+        ? (match.youWon ? '🏆 You won!' : `🌙 ${opponentName} won`)
+        : "🤝 It's a tie!"
+  const subtext = isExpired
+    ? 'Invite expired — this match closed because no one else joined.'
+    : `You ${match.yourScore ?? 0} · ${opponentName} ${match.theirScore ?? 0}`
 
   return (
     <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 bg-gradient-to-r from-wordy-100 to-pink-50 border border-wordy-200 dark:from-wordy-900/40 dark:to-purple-900/30 dark:border-wordy-700">

@@ -184,6 +184,24 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
     }
 
+    // ── game_closed: sn_expire_stale_matches closed a never-joined match ─
+    // 1v1 invite expired before the opponent joined. One recipient: the
+    // creator. (c151 baseline)
+    if (payload.type === 'game_closed') {
+      const { record } = payload
+      if (!record?.id || !record.creator_id) {
+        return new Response(JSON.stringify({ skipped: 'missing fields' }), { status: 200, headers: corsHeaders })
+      }
+      const result = await sendIfOptedIn(supabase, record.creator_id, 'snibble', 'game_closed', {
+        title: 'Snibble — match closed',
+        body: 'Your match closed because no one else joined in time. 🍃',
+        tag: `snibble-closed-${record.id}`,
+        url: `/snibble/`,
+        icon: '/snibble/favicon.svg',
+      })
+      return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
+    }
+
     // ── opponent_joined: sn_matches UPDATE, opponent_id null → set ──
     if (payload.type === 'opponent_joined') {
       const { record } = payload
