@@ -101,6 +101,28 @@ async function getUsername(supabase: any, userId: string): Promise<string> {
   return profile?.username ?? 'Someone'
 }
 
+// Rotating quips for the invite_declined push — funny / bird / dog / ADHD
+// flavoured, all warm rather than blunt. One picked at random per send.
+// Rae-approved set (2026-05-31).
+function declineBody(name: string, emoji: string): string {
+  const quips = [
+    `${name} flew the coop.`,
+    `${name} chickened out.`,
+    `${name} ducked out.`,
+    `${name}'s not your wingman today.`,
+    `${name} chased a squirrel instead.`,
+    `${name} rolled over and bailed.`,
+    `${name}'s in the doghouse.`,
+    `${name} buried this one in the yard.`,
+    `${name} got distracted by something shiny.`,
+    `${name}'s brain changed the channel.`,
+    `Ooh, squirrel — ${name}'s gone.`,
+    `${name} flew south for this one.`,
+  ]
+  const quip = quips[Math.floor(Math.random() * quips.length)]
+  return `${quip} Tap to start another. ${emoji}`
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -154,7 +176,7 @@ serve(async (req: Request) => {
       const declinerName = decliner_id ? await getUsername(supabase, decliner_id) : 'A friend'
       const result = await sendIfOptedIn(supabase, creator_id, 'snibble', 'invite_declined', {
         title: 'Snibble',
-        body: `${declinerName} couldn’t join this round. Tap to start another. 🍃`,
+        body: declineBody(declinerName, '🍃'),
         tag: `snibble-declined-${match_id}`,
         url: `/snibble/`,
         icon: '/snibble/favicon.svg',
