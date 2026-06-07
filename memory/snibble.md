@@ -786,3 +786,6 @@ Added a decline (x) button to incoming invites (MatchRow) + `sn_decline_invite` 
 
 ## Invite-expiry baseline (c151, 2026-06-01)
 Adopted the SQ invite-expiry baseline (1v1 → universal half only). `supabase/migrations/sn_invite_expiry_baseline.sql` (applied to prod via pooler): friend window 1d→3d; `sn_expire_stale_matches` now stamps `close_reason='no_other_players'` + fires a `game_closed` push to creator_id (keeps status='expired'; the Completed bucket in useMatches already lists 'expired'). Edge fn `snibble-push-notification`: added `game_closed` type. Client: CompletedMatchBanner shows "🚫 Match closed" + "invite expired" blurb for status==='expired' (non-admin). Commit 7fc2cba.
+
+## 2026-06-06 — Claim-inactive reviewed, no change needed (c153)
+Audited as part of the cross-game claim-inactive sweep. Snibble's claim button lives in WaitingForOpponentPanel as the PRIMARY content of that screen (not below a board), so it's already reachable on mobile — unlike Yahdle's, which sat below the fold. No code change. (claimMatchWin remains a client-side filtered UPDATE gated by status + last_activity_at; left as-is.)
