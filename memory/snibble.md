@@ -17,6 +17,14 @@ to your sanctuary.
 - **Stack:** React 18 + Vite + Tailwind + Supabase JS + react-hot-toast.
   (Same stack as Wordy. Rungles is being ported to match.)
 
+## Session: June 7, 2026 — How-to: nudge line added
+
+Added the missing 🔔-nudge sentence to the inactive-opponent copy in the
+"🎮 Two-player match" section of `HowToPlayModal.jsx` (nudge after 12h, claim
+after 7 days). Left Snibble's claim-from-**match-screen** wording as-is — Snibble's
+claim lives on the match screen, not the settings cog like the other 3 games.
+Whether to align it is deferred to Raeban c193. Part of the 4-game sweep (c185).
+
 ## Deployment
 - GitHub Actions auto-deploys on push to `main` (`.github/workflows/deploy.yml`)
 - Build secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
