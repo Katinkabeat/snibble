@@ -131,7 +131,8 @@ export default function HowToPlayModal({ onClose }) {
             </p>
             <p className="text-xs text-wordy-500 italic">
               Open matches auto-cancel after 7 days, friend invites after 24 hours if unaccepted.
-              If your opponent goes quiet, you can claim the win from the match screen.
+              If your opponent goes quiet, nudge them with a 🔔 reminder after 12 hours, or
+              claim the win from the match screen after 7 days.
             </p>
           </Section>
 
