@@ -22,6 +22,7 @@ import { isValidWord } from '../lib/dictionary.js'
 import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinMatch } from '../lib/matchActions.js'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
+import BuiltWordRow from './BuiltWordRow.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
@@ -700,22 +701,7 @@ function RoundPlayPanel({ user, match, round, opponentName, myName, totalRounds,
       </div>
 
       {/* Word being built */}
-      <div className="bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2">
-        {built.length === 0 ? (
-          <span className="italic text-wordy-500 text-sm">Build a word…</span>
-        ) : (
-          built.map((letter, i) => (
-            <button
-              key={i}
-              onClick={() => setBuilt(built.filter((_, j) => j !== i))}
-              title="Tap to remove this letter"
-              className="tile tile-placed font-display text-lg w-10 h-11"
-            >
-              {letter}
-            </button>
-          ))
-        )}
-      </div>
+      <BuiltWordRow built={built} setBuilt={setBuilt} placeholder="Build a word…" />
 
       {/* Letter tray */}
       <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-2">

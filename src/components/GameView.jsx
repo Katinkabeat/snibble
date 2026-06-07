@@ -22,6 +22,7 @@ import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
+import BuiltWordRow from './BuiltWordRow.jsx'
 import { PET_COMPONENTS } from '../lib/pets.jsx'
 import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
 const MILESTONE_MARKS = [5, 10, 25, 50] // word-count milestones for toasts
@@ -251,24 +252,12 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
           </div>
 
           {/* Word being built */}
-          <div className="mt-3 bg-white/70 border-2 border-dashed border-wordy-400 rounded-2xl px-3 py-3 min-h-[64px] flex flex-wrap items-center justify-center gap-1.5 mb-2">
-            {built.length === 0 ? (
-              <span className="italic text-wordy-500 text-sm">
-                Build a word for {petInfo.name}…
-              </span>
-            ) : (
-              built.map((letter, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBuilt(built.filter((_, j) => j !== i))}
-                  title="Tap to remove this letter"
-                  className="tile tile-placed font-display text-lg w-10 h-11"
-                >
-                  {letter}
-                </button>
-              ))
-            )}
-          </div>
+          <BuiltWordRow
+            built={built}
+            setBuilt={setBuilt}
+            placeholder={`Build a word for ${petInfo.name}…`}
+            className="mt-3"
+          />
 
           {/* Letter tray */}
           <div className="bg-white/70 border-2 border-wordy-300 rounded-2xl p-3 mb-2">
