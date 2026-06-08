@@ -21,6 +21,7 @@ import { useState } from 'react'
 import { useOpenMatches } from '../hooks/useMatches.js'
 import { joinMatch, cancelMatch, declineInvite } from '../lib/matchActions.js'
 import CreateMatchSheet from './CreateMatchSheet.jsx'
+import { timeAgo } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 export default function MultiplayerCard({ user, mine, onOpenMatch }) {
   const others = useOpenMatches(user.id)
@@ -293,16 +294,4 @@ function Chip({ name, highlight, muted }) {
       {name}
     </span>
   )
-}
-
-function timeAgo(iso) {
-  if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (mins > 0) return `${mins}m ago`
-  return 'just now'
 }
