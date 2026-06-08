@@ -19,11 +19,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase.js'
 import { isValidWord } from '../lib/dictionary.js'
-import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinMatch } from '../lib/matchActions.js'
+import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinMatch, forfeitMatch } from '../lib/matchActions.js'
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import BuiltWordRow from './BuiltWordRow.jsx'
-import { SQBoardShell, SQBoardHeader } from '../../../rae-side-quest/packages/sq-ui/index.js'
+import { SQBoardShell, SQBoardHeader, SQSettingsRow } from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [match, setMatch] = useState(null)
@@ -34,6 +34,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
+  const [forfeiting, setForfeiting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -149,10 +150,39 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
     (r) => !myPlays.some((p) => p.round_index === r.round_index)
   )
 
+  // Forfeit — concede the match; the opponent is declared the winner.
+  // Surfaced in the cog (gameRows) only while the match is in progress
+  // with both players present.
+  async function handleForfeit() {
+    if (forfeiting || !match) return
+    if (!window.confirm('Forfeit this match? Your opponent will be declared the winner.')) return
+    setForfeiting(true)
+    try {
+      const opponentId = match.creator_id === user.id ? match.opponent_id : match.creator_id
+      await forfeitMatch({ matchId: match.id, opponentId })
+      toast.success('Match forfeited.')
+      refresh()
+    } catch (err) {
+      console.error('[forfeitMatch] failed', err)
+      toast.error(err.message || 'Failed to forfeit')
+    } finally {
+      setForfeiting(false)
+    }
+  }
+  const cogGameRows = (match && match.status === 'in_progress' && match.opponent_id)
+    ? (close) => (
+        <SQSettingsRow
+          label="🏳️ Forfeit game"
+          danger
+          onClick={() => { close(); handleForfeit() }}
+        />
+      )
+    : null
+
   return (
     <SQBoardShell
       width="narrow"
-      header={<SnibbleHeader user={user} />}
+      header={<SnibbleHeader user={user} gameRows={cogGameRows} />}
       subHeader={<SQBoardHeader backLabel="← Lobby" onBackClick={onBack} />}
     >
       {loading && <p className="italic text-wordy-500 text-center py-12">Loading match…</p>}

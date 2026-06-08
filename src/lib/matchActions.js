@@ -198,6 +198,31 @@ export async function claimMatchWin({ matchId, userId }) {
 }
 
 /**
+ * Forfeit an in-progress match — the OTHER player is declared the winner.
+ * Mirrors claimMatchWin's direct-update pattern: the "sn_matches update
+ * participant" RLS policy lets any participant complete the row, and
+ * winner_id is unconstrained, so no RPC/migration is needed. Pass the
+ * opponent's id as the winner. Gated to status='in_progress' so a
+ * finished/cancelled match can't be retro-forfeited.
+ */
+export async function forfeitMatch({ matchId, opponentId }) {
+  const { data, error } = await supabase
+    .from('sn_matches')
+    .update({
+      status: 'completed',
+      winner_id: opponentId,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', matchId)
+    .eq('status', 'in_progress')
+    .select()
+    .single()
+  if (error) throw error
+  if (!data) throw new Error('Could not forfeit — the match may have already ended.')
+  return data
+}
+
+/**
  * Reconstruct a rule matcher from base_rule_ids stored on the round.
  * Single id → that rule. Two ids → AND-combined.
  */

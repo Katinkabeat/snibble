@@ -15,7 +15,7 @@ import { useProfile } from '../hooks/useProfile.js'
 import SnibbleAvatarMenu from './SnibbleAvatarMenu.jsx'
 import SnibbleSettingsDropdown from './SnibbleSettingsDropdown.jsx'
 
-export default function SnibbleHeader({ user }) {
+export default function SnibbleHeader({ user, gameRows = null }) {
   const profile = useProfile(user?.id)
   const [showSettings, setShowSettings] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -63,6 +63,7 @@ export default function SnibbleHeader({ user }) {
               <SnibbleSettingsDropdown
                 onClose={() => setShowSettings(false)}
                 isAdmin={isAdmin}
+                gameRows={gameRows}
               />
             )}
           </div>

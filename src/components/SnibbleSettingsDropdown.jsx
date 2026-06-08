@@ -19,7 +19,10 @@ import { SQReportPlayer, SQSettingsRow } from '../../../rae-side-quest/packages/
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import HowToPlayModal from './HowToPlayModal.jsx'
 
-export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
+// `gameRows` — optional render-prop `(close) => ReactNode` for game-specific
+// rows (e.g. Forfeit game on an active match). Called with a function that
+// closes the menu, so injected rows can dismiss it after acting.
+export default function SnibbleSettingsDropdown({ onClose, isAdmin, gameRows = null }) {
   const { isDark, toggle: toggleTheme } = useTheme()
   const ref = useRef(null)
   const [showHowToPlay, setShowHowToPlay] = useState(false)
@@ -72,6 +75,9 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
           }}
         />
       )}
+      {/* Game-specific rows (Forfeit game) injected on an active match via
+          the gameRows render-prop; the lobby and solo daily pass none. */}
+      {gameRows && gameRows(onClose)}
       <SQReportPlayer supabase={supabase} game="snibble" />
       <SQSettingsRow label="Log out" danger onClick={handleLogout} />
 
