@@ -35,6 +35,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [error, setError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
   const [forfeiting, setForfeiting] = useState(false)
+  const [claiming, setClaiming] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -150,9 +151,29 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
     (r) => !myPlays.some((p) => p.round_index === r.round_index)
   )
 
+  // Claim win — for a match stalled 7+ days. Shown in the cog like the
+  // other SQ games: always visible during an active match, disabled until
+  // claimable (you've submitted everything and the opponent has gone quiet
+  // for 7+ days). last_activity_at resets on any submission.
+  const lastActivityMs = match?.last_activity_at ? new Date(match.last_activity_at).getTime() : Date.now()
+  const matchAgeDays = (Date.now() - lastActivityMs) / (1000 * 60 * 60 * 24)
+  const canClaim = !!match && match.status === 'in_progress' && !currentRound && matchAgeDays >= 7
+  async function handleClaim() {
+    if (claiming || !match) return
+    setClaiming(true)
+    try {
+      await claimMatchWin({ matchId: match.id, userId: user.id })
+      toast.success('Match claimed.')
+      refresh()
+    } catch (err) {
+      console.error('[claimMatchWin] failed', err)
+      toast.error(err.message || 'Failed to claim match')
+    } finally {
+      setClaiming(false)
+    }
+  }
+
   // Forfeit — concede the match; the opponent is declared the winner.
-  // Surfaced in the cog (gameRows) only while the match is in progress
-  // with both players present.
   async function handleForfeit() {
     if (forfeiting || !match) return
     if (!window.confirm('Forfeit this match? Your opponent will be declared the winner.')) return
@@ -169,13 +190,27 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
       setForfeiting(false)
     }
   }
+
+  // Game-specific cog rows (Claim win / Forfeit), injected into the shared
+  // settings menu only while the match is in progress with both players
+  // present — matches the cross-game cog pattern (c201).
   const cogGameRows = (match && match.status === 'in_progress' && match.opponent_id)
     ? (close) => (
-        <SQSettingsRow
-          label="🏳️ Forfeit game"
-          danger
-          onClick={() => { close(); handleForfeit() }}
-        />
+        <>
+          <SQSettingsRow
+            label="🏆 Claim win (opponent inactive)"
+            disabled={!canClaim || claiming}
+            title={canClaim
+              ? 'Claim the win — opponent inactive 7+ days'
+              : 'Available once your opponent has been inactive for 7 days'}
+            onClick={() => { close(); handleClaim() }}
+          />
+          <SQSettingsRow
+            label="🏳️ Forfeit game"
+            danger
+            onClick={() => { close(); handleForfeit() }}
+          />
+        </>
       )
     : null
 
@@ -279,7 +314,6 @@ function OpenMatchPanel({ match }) {
 
 function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, theirPlays, rounds, onClaimed }) {
   const totalRounds = rounds.length
-  const [claiming, setClaiming] = useState(false)
   const [nudging, setNudging] = useState(false)
   const [justNudged, setJustNudged] = useState(false)
 
@@ -289,7 +323,6 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
     ? new Date(match.last_activity_at).getTime()
     : Date.now()
   const ageDays = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24)
-  const canClaim = ageDays >= 7
   const daysUntilClaim = Math.max(0, Math.ceil(7 - ageDays))
 
   // Nudge: 12h cooldowns on both last_activity (don't nudge a fresh
@@ -300,21 +333,6 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
   const turnAge = Date.now() - lastActivity
   const nudgeAge = Date.now() - lastNudged
   const canNudge = !justNudged && turnAge > NUDGE_COOLDOWN_MS && nudgeAge > NUDGE_COOLDOWN_MS
-
-  async function handleClaim() {
-    if (claiming) return
-    setClaiming(true)
-    try {
-      await claimMatchWin({ matchId: match.id, userId: user.id })
-      toast.success('Match claimed.')
-      onClaimed()
-    } catch (err) {
-      console.error('[claimMatchWin] failed', err)
-      toast.error(err.message || 'Failed to claim match')
-    } finally {
-      setClaiming(false)
-    }
-  }
 
   async function handleNudge() {
     if (nudging || !canNudge) return
@@ -366,15 +384,7 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
             ? 'Your round is locked in.'
             : `You've finished all ${totalRounds} rounds.`}
         </p>
-        {canClaim ? (
-          <button
-            onClick={handleClaim}
-            disabled={claiming}
-            className="btn-primary mt-4 text-sm font-display disabled:opacity-50"
-          >
-            {claiming ? 'Claiming…' : `Claim win (${Math.floor(ageDays)} days inactive)`}
-          </button>
-        ) : canNudge ? (
+        {canNudge ? (
           <button
             onClick={handleNudge}
             disabled={nudging}
