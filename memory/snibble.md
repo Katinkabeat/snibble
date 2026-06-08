@@ -797,3 +797,6 @@ Adopted the SQ invite-expiry baseline (1v1 → universal half only). `supabase/m
 
 ## 2026-06-06 — Claim-inactive reviewed, no change needed (c153)
 Audited as part of the cross-game claim-inactive sweep. Snibble's claim button lives in WaitingForOpponentPanel as the PRIMARY content of that screen (not below a board), so it's already reachable on mobile — unlike Yahdle's, which sat below the fold. No code change. (claimMatchWin remains a client-side filtered UPDATE gated by status + last_activity_at; left as-is.)
+
+## 2026-06-07 — timeAgo moved to shared sq-ui helper (c186)
+Deleted the inline `timeAgo` in components/MultiplayerCard.jsx and imported the shared `timeAgo` from rae-side-quest/packages/sq-ui/index.js. Snibble relies on the helper returning "" (not null) for empty input since it is used inline in a template string. No behavior change.
