@@ -198,7 +198,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
     ? (close) => (
         <>
           <SQSettingsRow
-            label="🏆 Claim win (opponent inactive)"
+            label="Claim win (opponent inactive)"
             disabled={!canClaim || claiming}
             title={canClaim
               ? 'Claim the win — opponent inactive 7+ days'
@@ -206,7 +206,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
             onClick={() => { close(); handleClaim() }}
           />
           <SQSettingsRow
-            label="🏳️ Forfeit game"
+            label="Forfeit game"
             danger
             onClick={() => { close(); handleForfeit() }}
           />

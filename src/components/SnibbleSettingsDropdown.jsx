@@ -51,7 +51,7 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin, gameRows = n
 
   return (
     <div ref={ref} className="settings-dropdown card">
-      {/* Canonical SQ order: Theme → How to play → Admin → Report → Log out */}
+      {/* Canonical SQ order: Theme → How to play → Admin → Report → game rows → Log out */}
       <SQSettingsRow
         label="Theme"
         control={isDark ? '☀️ Light' : '🌙 Dark'}
@@ -75,10 +75,11 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin, gameRows = n
           }}
         />
       )}
-      {/* Game-specific rows (Forfeit game) injected on an active match via
-          the gameRows render-prop; the lobby and solo daily pass none. */}
-      {gameRows && gameRows(onClose)}
       <SQReportPlayer supabase={supabase} game="snibble" />
+      {/* Game-specific rows (Claim win / Forfeit game) injected on an active
+          match via the gameRows render-prop, grouped with Log out at the
+          bottom; the lobby and solo daily pass none. */}
+      {gameRows && gameRows(onClose)}
       <SQSettingsRow label="Log out" danger onClick={handleLogout} />
 
       {showHowToPlay && <HowToPlayModal onClose={() => setShowHowToPlay(false)} />}
