@@ -62,7 +62,7 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
       {isAdmin && (
         <SQSettingsRow
           label="Admin panel"
-          control="Open"
+          control="🔐 Open"
           title="Open the admin panel (close stuck matches, etc.)"
           onClick={() => {
             onClose()
