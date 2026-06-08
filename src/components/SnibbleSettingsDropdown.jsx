@@ -66,7 +66,7 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
           onClick={() => setShowHowToPlay(true)}
           className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
         >
-          ❓ Open
+          📖 Open
         </button>
       </div>
 
@@ -86,7 +86,7 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
               className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
               title="Open the admin panel (close stuck matches, etc.)"
             >
-              🔐 Open
+              Open
             </button>
           </div>
         </>
