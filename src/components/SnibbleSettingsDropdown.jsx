@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { SQReportPlayer } from '../../../rae-side-quest/packages/sq-ui/index.js'
+import { SQReportPlayer, SQSettingsRow } from '../../../rae-side-quest/packages/sq-ui/index.js'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import HowToPlayModal from './HowToPlayModal.jsx'
 
@@ -48,62 +48,32 @@ export default function SnibbleSettingsDropdown({ onClose, isAdmin }) {
 
   return (
     <div ref={ref} className="settings-dropdown card">
-      {/* Theme — light / dark toggle, persisted in localStorage. */}
-      <div className="settings-row">
-        <span className="text-sm font-bold text-wordy-600">Theme</span>
-        <button
-          onClick={toggleTheme}
-          className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
-        >
-          {isDark ? '☀️ Light' : '🌙 Dark'}
-        </button>
-      </div>
-
-      {/* How to play — opens the HowToPlayModal. */}
-      <div className="settings-row">
-        <span className="text-sm font-bold text-wordy-600">How to play</span>
-        <button
-          onClick={() => setShowHowToPlay(true)}
-          className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
-        >
-          📖 Open
-        </button>
-      </div>
-
-      {/* Admin panel — admin-only. Sits right after How to play, per the
-          canonical SQ settings order. */}
+      {/* Canonical SQ order: Theme → How to play → Admin → Report → Log out */}
+      <SQSettingsRow
+        label="Theme"
+        control={isDark ? '☀️ Light' : '🌙 Dark'}
+        onClick={toggleTheme}
+      />
+      <SQSettingsRow
+        label="How to play"
+        control="📖 Open"
+        onClick={() => setShowHowToPlay(true)}
+      />
       {isAdmin && (
-        <>
-          <div className="settings-row">
-            <span className="text-sm font-bold text-wordy-600">Admin panel</span>
-            <button
-              onClick={() => {
-                onClose()
-                const url = `${window.location.pathname}?view=admin${window.location.hash}`
-                window.history.pushState({}, '', url)
-                window.dispatchEvent(new PopStateEvent('popstate'))
-              }}
-              className="text-sm font-bold text-wordy-700 hover:text-wordy-500 transition-colors"
-              title="Open the admin panel (close stuck matches, etc.)"
-            >
-              Open
-            </button>
-          </div>
-        </>
+        <SQSettingsRow
+          label="Admin panel"
+          control="Open"
+          title="Open the admin panel (close stuck matches, etc.)"
+          onClick={() => {
+            onClose()
+            const url = `${window.location.pathname}?view=admin${window.location.hash}`
+            window.history.pushState({}, '', url)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+          }}
+        />
       )}
-
-      {/* Report a player */}
       <SQReportPlayer supabase={supabase} game="snibble" />
-
-      {/* Log out — rose, always last. */}
-      <div className="settings-row">
-        <button
-          onClick={handleLogout}
-          className="text-sm font-bold text-rose-500 hover:text-rose-700 transition-colors"
-        >
-          Log out
-        </button>
-      </div>
+      <SQSettingsRow label="Log out" danger onClick={handleLogout} />
 
       {showHowToPlay && <HowToPlayModal onClose={() => setShowHowToPlay(false)} />}
     </div>
