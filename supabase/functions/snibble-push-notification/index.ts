@@ -276,6 +276,44 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
     }
 
+    // ── game_finished: sn_matches in_progress → completed via claim/forfeit ──
+    // Fires only when end_reason is set (the trigger gates on it), so a normal
+    // last-round completion (covered by round_submitted) never double-pushes.
+    if (payload.type === 'game_finished') {
+      const { record } = payload
+      if (!record?.id || !record.winner_id || !record.end_reason) {
+        return new Response(JSON.stringify({ skipped: 'missing fields' }), { status: 200, headers: corsHeaders })
+      }
+      const winnerId = record.winner_id
+      const loserId = record.creator_id === winnerId ? record.opponent_id : record.creator_id
+      if (!loserId) {
+        return new Response(JSON.stringify({ skipped: 'no opponent' }), { status: 200, headers: corsHeaders })
+      }
+
+      // claim   → notify the LOSER (claimed against while idle)
+      // forfeit → notify the WINNER (their opponent gave up)
+      const isClaim = record.end_reason === 'claim'
+      const recipientId = isClaim ? loserId : winnerId
+
+      let title: string, body: string
+      if (isClaim) {
+        title = 'Snibble — match over'
+        body = `${await getUsername(supabase, winnerId)} claimed the win because your turn was idle 7+ days.`
+      } else {
+        title = 'Snibble — you won!'
+        body = `${await getUsername(supabase, loserId)} forfeited, you win!`
+      }
+
+      const result = await sendIfOptedIn(supabase, recipientId, 'snibble', 'game_finished', {
+        title,
+        body,
+        tag: `snibble-finish-${record.id}`,
+        url: `/snibble/?match=${record.id}`,
+        icon: '/snibble/favicon.svg',
+      })
+      return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders })
+    }
+
     return new Response(JSON.stringify({ skipped: 'unknown type' }), { status: 200, headers: corsHeaders })
   } catch (err: any) {
     console.error('Snibble push notification error:', err)

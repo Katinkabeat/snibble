@@ -186,6 +186,7 @@ export async function claimMatchWin({ matchId, userId }) {
       status: 'completed',
       winner_id: userId,
       completed_at: new Date().toISOString(),
+      end_reason: 'claim',
     })
     .eq('id', matchId)
     .eq('status', 'in_progress')
@@ -212,6 +213,7 @@ export async function forfeitMatch({ matchId, opponentId }) {
       status: 'completed',
       winner_id: opponentId,
       completed_at: new Date().toISOString(),
+      end_reason: 'forfeit',
     })
     .eq('id', matchId)
     .eq('status', 'in_progress')
