@@ -17,6 +17,13 @@ to your sanctuary.
 - **Stack:** React 18 + Vite + Tailwind + Supabase JS + react-hot-toast.
   (Same stack as Wordy. Rungles is being ported to match.)
 
+## Session: June 14, 2026 — Lobby "View today's result" (c216)
+
+`LobbyView.jsx` now checks `sn_daily_feeds.is_complete` for today on mount and flips the
+daily-card button from "▶ Play" to "↗ View today's result" when the day is finished (matches
+Rungles' lobby). Fully cross-device since `is_complete` is server-persisted and re-entry already
+renders the `CompleteCard`. No "Played today" pill (added one, Rae had it removed). Committed + pushed.
+
 ## Session: June 7, 2026 — How-to: nudge line added
 
 Added the missing 🔔-nudge sentence to the inactive-opponent copy in the
