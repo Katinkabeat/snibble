@@ -109,11 +109,6 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         <section className="card">
           <div className="flex items-center gap-2 mb-1">
             <h2 className="font-display text-xl text-wordy-700">🌅 Today's Snibble</h2>
-            {doneToday && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700 text-xs font-bold">
-                ✓ Played today
-              </span>
-            )}
             {puzzleTeaser && (
               <span
                 className="text-xs"
