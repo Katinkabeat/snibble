@@ -11,6 +11,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase.js'
 import { loadDailyPuzzle } from '../lib/dailyPuzzle.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useStreak } from '../hooks/useStreak.js'
@@ -25,6 +26,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
   const { petInfo, loading: petLoading } = useActivePet(user.id)
   const { streak } = useStreak(user.id)
   const [puzzleTeaser, setPuzzleTeaser] = useState(null)
+  const [doneToday, setDoneToday] = useState(false)
   const mine = useMatches(user.id)
 
   useEffect(() => {
@@ -34,6 +36,25 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
       .catch(() => {})
     return () => { active = false }
   }, [])
+
+  // Reflect whether today's daily is finished (Done tapped or every word
+  // found), so the card offers a "view today's result" path instead of
+  // "play" — matches Rungles' lobby. An in-progress row stays "Play".
+  useEffect(() => {
+    if (!user?.id) return
+    let active = true
+    const date = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Halifax', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date())
+    supabase
+      .from('sn_daily_feeds')
+      .select('is_complete')
+      .eq('user_id', user.id)
+      .eq('feed_date', date)
+      .maybeSingle()
+      .then(({ data }) => { if (active) setDoneToday(!!data?.is_complete) })
+    return () => { active = false }
+  }, [user?.id])
 
   const PetComponent = petInfo ? (PET_COMPONENTS[petInfo.petId] ?? PET_COMPONENTS.mossy) : null
 
@@ -88,6 +109,11 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
         <section className="card">
           <div className="flex items-center gap-2 mb-1">
             <h2 className="font-display text-xl text-wordy-700">🌅 Today's Snibble</h2>
+            {doneToday && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wordy-200 text-wordy-700 text-xs font-bold">
+                ✓ Played today
+              </span>
+            )}
             {puzzleTeaser && (
               <span
                 className="text-xs"
@@ -107,7 +133,7 @@ export default function LobbyView({ user, onPlayDaily, onOpenSanctuary, onOpenMa
             <p className="text-sm text-wordy-500 italic mb-3">Loading today's puzzle…</p>
           )}
           <button onClick={onPlayDaily} className="btn-primary text-sm font-display">
-            ▶ Play
+            {doneToday ? '↗ View today\'s result' : '▶ Play'}
           </button>
         </section>
 
