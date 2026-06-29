@@ -29,11 +29,17 @@ export function useDailyState({ userId, petId }) {
     loaded: false,
   })
   const onGrowthRef = useRef(null)
+  // The Atlantic date this session was loaded for. Pinned once at load
+  // and reused for every write below, so a session that crosses midnight
+  // keeps writing to the day it started (the puzzle that's actually loaded)
+  // instead of spilling yesterday's solve onto today's feed_date.
+  const sessionDateRef = useRef(null)
 
   useEffect(() => {
     if (!userId || !petId) return
     let active = true
     const date = atlanticToday()
+    sessionDateRef.current = date
 
     async function load() {
       const { data, error } = await supabase
@@ -72,7 +78,7 @@ export function useDailyState({ userId, petId }) {
    */
   async function recordFeed({ word, wordScore, willComplete }) {
     if (!userId || !petId) return
-    const date = atlanticToday()
+    const date = sessionDateRef.current || atlanticToday()
     const wasFirstFeed = state.wordsFed.length === 0
 
     const newWordsFed = [...state.wordsFed, { word, score: wordScore }]
@@ -121,7 +127,7 @@ export function useDailyState({ userId, petId }) {
    */
   async function resetToday() {
     if (!userId) return
-    const date = atlanticToday()
+    const date = sessionDateRef.current || atlanticToday()
     const { error } = await supabase
       .from('sn_daily_feeds')
       .delete()
@@ -139,7 +145,7 @@ export function useDailyState({ userId, petId }) {
     if (!userId || !petId) return
     if (state.isComplete) return
     if (state.wordsFed.length === 0) return
-    const date = atlanticToday()
+    const date = sessionDateRef.current || atlanticToday()
     setState((prev) => ({ ...prev, isComplete: true }))
     const { error } = await supabase
       .from('sn_daily_feeds')
