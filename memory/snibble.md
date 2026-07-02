@@ -17,6 +17,47 @@ to your sanctuary.
 - **Stack:** React 18 + Vite + Tailwind + Supabase JS + react-hot-toast.
   (Same stack as Wordy. Rungles is being ported to match.)
 
+## Session: July 2, 2026 — completed_at for Rook "mouthful" highlight
+
+Added a **`completed_at timestamptz`** column to `sn_daily_feeds` (migration
+`sn_daily_feeds_completed_at.sql`, applied to shared Supabase; nullable). Set
+once when the feed finishes — in `useDailyState.js`: `markComplete()` now writes
+`{ is_complete: true, completed_at: now }`, and `recordFeed()` adds
+`completed_at` to its upsert only on the completing feed (`willComplete`).
+
+**Why:** Rook's #highlights detection uses a "new since last poll" timestamp
+cursor. `played_at` freezes at the FIRST feed of the day (the recordFeed upsert
+never updates it), so it can't drive detection. `completed_at` gives a clean
+once-per-day event. Rook's `snibble_mouthful` trigger fires when a completed
+feed contains a 7+ letter word, cheering the longest one. Snibble commit
+`cf1db5b`. NOTE: verified at the data layer (column writable by `authenticated`,
+Rook RPC emits the event) but the live React write of `completed_at` wasn't
+exercised headlessly (Snibble's standalone dev bounces to the hub for auth) —
+confirm on a real completed daily.
+
+## Session: June 29, 2026 — Daily date-pin fix (cross-midnight bug)
+
+**Bug:** snuggie was wrongly #1 on the 6/29 daily leaderboard with the *6/28*
+puzzle's words. Root cause: `useDailyState.js` recomputed `atlanticToday()`
+fresh on every write (load / `recordFeed` / `markComplete`). A session that
+crossed Atlantic midnight wrote its completing word with the *new* day's date,
+so a 6/28 solve finished at ~00:00 landed on the 6/29 `feed_date` and topped
+today's board. (PK `(user_id, feed_date)` let the mis-dated row coexist.)
+
+**Fix (commit `1459cc8`):** pin the Atlantic date once in a `ref` at load and
+reuse it for all writes (`recordFeed` / `markComplete` / `resetToday`). A
+session now always writes to the day it started = the puzzle actually loaded.
+Snuggie's bad rows were cleaned up by hand in the DB (her real completed 6/28
+result restored; bogus 6/29 row deleted).
+
+**Still open (Raeban c237):** the date-pin fixes the *accidental* case but NOT
+a deliberate cheat — past-day leaderboards ungate at midnight (c92), so a
+still-open session can read yesterday's revealed words and submit to it.
+Direction A (Rae): server-side write guard rejecting non-today writes to
+`sn_daily_feeds` + auto-submit-with-note at midnight. Snibble is the reference
+impl; then audit Rungles/Yahdle/Wordy/Oublex. Quill post held until c237 ships
+(date-pin alone is a partial fix).
+
 ## Session: June 14, 2026 — Lobby "View today's result" (c216)
 
 `LobbyView.jsx` now checks `sn_daily_feeds.is_complete` for today on mount and flips the
