@@ -191,6 +191,11 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
     await onMarkComplete()
     toast.success(`${petInfo.name} is full enough 🌙`)
     // Navigate to the full StatsPage (route-based, matching Yahdle/Rungles).
+    goToStats()
+  }
+
+  // Jump straight to the leaderboard/stats view (matches Yahdle/Rungles).
+  function goToStats() {
     const newUrl = `${window.location.pathname}?view=stats${window.location.hash}`
     window.history.pushState({}, '', newUrl)
     window.dispatchEvent(new PopStateEvent('popstate'))
@@ -224,6 +229,8 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
             fedCount={fedCount}
             totalSolutions={puzzle.totalSolutions}
             parCount={puzzle.parCount}
+            onBackToLobby={onBack}
+            onViewLeaderboard={goToStats}
           />
         </>
       ) : (
@@ -366,7 +373,7 @@ function FullnessBar({ fed, total, par }) {
   )
 }
 
-function CompleteCard({ petName, score, fedCount, totalSolutions, parCount }) {
+function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, onBackToLobby, onViewLeaderboard }) {
   const gotThemAll = fedCount >= totalSolutions
   const pastPar = parCount > 0 && fedCount >= parCount
   return (
@@ -387,6 +394,10 @@ function CompleteCard({ petName, score, fedCount, totalSolutions, parCount }) {
           You found every word in the dictionary today.
         </p>
       )}
+      <div className="flex gap-2 justify-center mt-4">
+        <button className="btn-secondary" onClick={onBackToLobby}>← Lobby</button>
+        <button className="btn-primary" onClick={onViewLeaderboard}>🏆 Leaderboard</button>
+      </div>
     </div>
   )
 }
