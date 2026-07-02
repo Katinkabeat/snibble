@@ -854,3 +854,6 @@ Snibble's claim & forfeit are CLIENT-SIDE sn_matches UPDATEs (matchActions.js cl
 
 ## 2026-07-02 — End-of-daily leaderboard shortcut (c240)
 Added Lobby + Leaderboard buttons to CompleteCard (the re-entry "already fed today" panel) in components/GameView.jsx. Extracted the inline stats-nav out of the finish handler into a `goToStats()` helper (pushState `?view=stats` + popstate dispatch) and reused it; passed `onBackToLobby={onBack}` + `onViewLeaderboard={goToStats}` into CompleteCard. A fresh finish already auto-navigated to stats on markComplete, so this only closes the re-entry gap. Compile-verified via Vite transform (200). Commit 2843c19.
+
+## 2026-07-02 — Removed "← you" leaderboard self-marker (Rae request)
+Dropped the "← you" text label (Wordy: "(you)") from the leaderboard row in StatsPage. The `isYou`/`isMe` prop still drives the row highlight (bg-white/15 ring) — only the redundant text was removed. In-match "(you)" during live games left as-is (not a leaderboard). No Quill post (Rae's call, too small).
