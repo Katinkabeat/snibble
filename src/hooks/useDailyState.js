@@ -102,6 +102,10 @@ export function useDailyState({ userId, petId }) {
           words_fed: newWordsFed.map((w) => w.word),
           score: newScore,
           is_complete: isComplete,
+          // Stamp the completion time only on the feed that finishes the day
+          // (Rook's #highlights "mouthful" trigger keys off it — played_at
+          // freezes at the first feed, so it can't be a per-event cursor).
+          ...(isComplete ? { completed_at: new Date().toISOString() } : {}),
           // phases_done is vestigial post-v2; persist 0 so older
           // rows reading the column still get a valid integer.
           phases_done: 0,
@@ -149,7 +153,7 @@ export function useDailyState({ userId, petId }) {
     setState((prev) => ({ ...prev, isComplete: true }))
     const { error } = await supabase
       .from('sn_daily_feeds')
-      .update({ is_complete: true })
+      .update({ is_complete: true, completed_at: new Date().toISOString() })
       .eq('user_id', userId)
       .eq('feed_date', date)
     if (error) console.error('[useDailyState] markComplete error', error)
