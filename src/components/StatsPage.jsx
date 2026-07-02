@@ -304,7 +304,6 @@ function LeaderboardRow({ row, expanded, onToggle, canSeeWords }) {
         <div className="w-9 text-center font-display text-sm">#{row.rank}</div>
         <div className="flex-1 min-w-0 truncate text-sm">
           <span className="font-bold">{row.username}</span>
-          {row.isYou && <span className="ml-2 text-[10px] opacity-60">← you</span>}
           {isPerfect && <span className="ml-1" title="Found them all">✨</span>}
         </div>
         <div className="text-right shrink-0 flex items-center gap-2">
