@@ -26,6 +26,7 @@ export function useDailyState({ userId, petId }) {
     wordsFed: [],          // [{ word, score }]
     score: 0,
     isComplete: false,
+    expired: false,        // day rolled over mid-session; session auto-closed
     loaded: false,
   })
   const onGrowthRef = useRef(null)
@@ -34,12 +35,21 @@ export function useDailyState({ userId, petId }) {
   // keeps writing to the day it started (the puzzle that's actually loaded)
   // instead of spilling yesterday's solve onto today's feed_date.
   const sessionDateRef = useRef(null)
+  // Guards so the midnight rollover only closes the session once, and so
+  // the rollover watcher can read "already complete" without a stale
+  // closure over state.
+  const expiredRef = useRef(false)
+  const completeRef = useRef(false)
+
+  useEffect(() => { completeRef.current = state.isComplete }, [state.isComplete])
 
   useEffect(() => {
     if (!userId || !petId) return
     let active = true
     const date = atlanticToday()
     sessionDateRef.current = date
+
+    expiredRef.current = false
 
     async function load() {
       const { data, error } = await supabase
@@ -56,14 +66,36 @@ export function useDailyState({ userId, petId }) {
           wordsFed: (data.words_fed || []).map((w) => ({ word: w, score: 0 })),
           score: data.score || 0,
           isComplete: !!data.is_complete,
+          expired: false,
           loaded: true,
         })
       } else {
-        setState({ wordsFed: [], score: 0, isComplete: false, loaded: true })
+        setState({ wordsFed: [], score: 0, isComplete: false, expired: false, loaded: true })
       }
     }
     load()
     return () => { active = false }
+  }, [userId, petId])
+
+  // Midnight rollover watcher. If the day ticks over while a session is
+  // open and unfinished, close it: lock in whatever was already fed onto
+  // the day it was started (via the finalize RPC's one-day grace) and
+  // flag `expired` so the UI can say "time's up for that daily". Any new
+  // feed after this point would be rejected by the server guard anyway.
+  useEffect(() => {
+    if (!userId || !petId) return
+    const id = setInterval(() => {
+      if (
+        !completeRef.current &&
+        sessionDateRef.current &&
+        atlanticToday() !== sessionDateRef.current
+      ) {
+        expireSession()
+      }
+    }, 30000)
+    return () => clearInterval(id)
+    // expireSession is stable enough for this purpose (reads refs, not state).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, petId])
 
   function onFirstFeed(cb) {
@@ -79,44 +111,62 @@ export function useDailyState({ userId, petId }) {
   async function recordFeed({ word, wordScore, willComplete }) {
     if (!userId || !petId) return
     const date = sessionDateRef.current || atlanticToday()
-    const wasFirstFeed = state.wordsFed.length === 0
 
+    // If the day rolled over since this session loaded, don't try to write
+    // to a now-past date (the server guard would reject it). Close the
+    // session instead — this is the honest late-night finisher's exit.
+    if (atlanticToday() !== date) {
+      await expireSession()
+      return
+    }
+
+    const wasFirstFeed = state.wordsFed.length === 0
     const newWordsFed = [...state.wordsFed, { word, score: wordScore }]
     const newScore = state.score + wordScore
     const isComplete = !!willComplete
 
-    setState({
+    setState((prev) => ({
+      ...prev,
       wordsFed: newWordsFed,
       score: newScore,
       isComplete,
       loaded: true,
-    })
+    }))
 
-    const { error } = await supabase
-      .from('sn_daily_feeds')
-      .upsert(
-        {
-          user_id: userId,
-          feed_date: date,
-          pet_id: petId,
-          words_fed: newWordsFed.map((w) => w.word),
-          score: newScore,
-          is_complete: isComplete,
-          // Stamp the completion time only on the feed that finishes the day
-          // (Rook's #highlights "mouthful" trigger keys off it — played_at
-          // freezes at the first feed, so it can't be a per-event cursor).
-          ...(isComplete ? { completed_at: new Date().toISOString() } : {}),
-          // phases_done is vestigial post-v2; persist 0 so older
-          // rows reading the column still get a valid integer.
-          phases_done: 0,
-        },
-        { onConflict: 'user_id,feed_date' }
-      )
-    if (error) console.error('[useDailyState] upsert error', error)
+    // Writes go through the SECURITY DEFINER guard (sn_daily_feeds_write_guard):
+    // it stamps user_id from auth.uid(), rejects any non-today feed_date, and
+    // sets completed_at once on the finishing feed. Rook's #highlights
+    // "mouthful" trigger keys off completed_at.
+    const { error } = await supabase.rpc('sn_record_daily_feed', {
+      p_feed_date: date,
+      p_pet_id: petId,
+      p_words_fed: newWordsFed.map((w) => w.word),
+      p_score: newScore,
+      p_is_complete: isComplete,
+    })
+    if (error) console.error('[useDailyState] record feed error', error)
 
     if (wasFirstFeed && onGrowthRef.current) {
       try { await onGrowthRef.current() } catch (e) { console.warn('[useDailyState] growth callback failed', e) }
     }
+  }
+
+  /**
+   * Close a session whose day has rolled over. Locks in whatever was
+   * already fed onto the day it started (the finalize RPC's one-day
+   * grace) and flags `expired` so the UI can tell the player time's up.
+   * Idempotent via expiredRef so the interval + a racing feed can't
+   * double-fire it.
+   */
+  async function expireSession() {
+    if (expiredRef.current) return
+    expiredRef.current = true
+    const date = sessionDateRef.current
+    if (date) {
+      const { error } = await supabase.rpc('sn_finalize_daily_feed', { p_feed_date: date })
+      if (error) console.warn('[useDailyState] expire finalize error', error)
+    }
+    setState((prev) => ({ ...prev, isComplete: true, expired: true }))
   }
 
   /**
@@ -141,7 +191,8 @@ export function useDailyState({ userId, petId }) {
       console.error('[useDailyState] resetToday error', error)
       return
     }
-    setState({ wordsFed: [], score: 0, isComplete: false, loaded: true })
+    expiredRef.current = false
+    setState({ wordsFed: [], score: 0, isComplete: false, expired: false, loaded: true })
   }
 
   /** Manually wrap up the session (player taps "Done for today"). */
@@ -151,11 +202,9 @@ export function useDailyState({ userId, petId }) {
     if (state.wordsFed.length === 0) return
     const date = sessionDateRef.current || atlanticToday()
     setState((prev) => ({ ...prev, isComplete: true }))
-    const { error } = await supabase
-      .from('sn_daily_feeds')
-      .update({ is_complete: true, completed_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('feed_date', date)
+    // Finalize goes through the guard's today/yesterday grace and only flips
+    // is_complete on the existing row — it can't alter words or score.
+    const { error } = await supabase.rpc('sn_finalize_daily_feed', { p_feed_date: date })
     if (error) console.error('[useDailyState] markComplete error', error)
   }
 

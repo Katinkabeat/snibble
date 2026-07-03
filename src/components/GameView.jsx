@@ -116,7 +116,18 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
   const wordsFed = dailyState.wordsFed
   const fedCount = wordsFed.length
   const score = dailyState.score
+  const expired = dailyState.expired
   const isComplete = dailyState.isComplete || fedCount >= puzzle.totalSolutions
+
+  // One-time "time's up" note when the day rolls over mid-session. The
+  // words fed before midnight are saved onto the day they were started.
+  const expiredToastRef = useRef(false)
+  useEffect(() => {
+    if (expired && !expiredToastRef.current) {
+      expiredToastRef.current = true
+      toast('🌙 A new day arrived — that daily is closed. What you fed is saved.', { duration: 5000 })
+    }
+  }, [expired])
 
   // Milestone + par-crossing toasts. Tracked via refs so they fire once.
   useEffect(() => {
@@ -229,6 +240,7 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
             fedCount={fedCount}
             totalSolutions={puzzle.totalSolutions}
             parCount={puzzle.parCount}
+            expired={expired}
             onBackToLobby={onBack}
             onViewLeaderboard={goToStats}
           />
@@ -373,19 +385,23 @@ function FullnessBar({ fed, total, par }) {
   )
 }
 
-function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, onBackToLobby, onViewLeaderboard }) {
+function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, expired, onBackToLobby, onViewLeaderboard }) {
   const gotThemAll = fedCount >= totalSolutions
   const pastPar = parCount > 0 && fedCount >= parCount
   return (
     <div className="card p-5 text-center mt-4">
       <p className="font-display text-2xl text-wordy-800 mb-1">
-        {gotThemAll
-          ? `${petName} is FULL! 🎉`
-          : pastPar
-            ? `${petName} ate well 🌸`
-            : `${petName} is settled 🌙`}
+        {expired
+          ? `${petName}'s day wrapped 🌙`
+          : gotThemAll
+            ? `${petName} is FULL! 🎉`
+            : pastPar
+              ? `${petName} ate well 🌸`
+              : `${petName} is settled 🌙`}
       </p>
-      <p className="text-sm text-wordy-700">See you tomorrow.</p>
+      <p className="text-sm text-wordy-700">
+        {expired ? "A new day began, so that daily closed. What you fed is saved." : 'See you tomorrow.'}
+      </p>
       <p className="text-sm text-wordy-700 mt-3">
         Score: <strong>{score}</strong>  ·  {fedCount} of {totalSolutions} words
       </p>
