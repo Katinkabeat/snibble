@@ -343,21 +343,36 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
       if (error) throw error
       if (!targetId) throw new Error('No opponent to nudge')
 
-      // Fire-and-forget push delivery.
-      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          type: 'nudge',
-          match_id: match.id,
-          target_user_id: targetId,
-          nudger_name: myName,
-        }),
-      }).catch((e) => console.warn('[sn nudge] push delivery failed', e))
+      // The push IS the nudge — await it so a dropped POST surfaces instead
+      // of a false "sent" toast (c239). 8s cap so a hung edge fn can't spin
+      // the button forever.
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 8000)
+      let ok = false
+      try {
+        const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            type: 'nudge',
+            match_id: match.id,
+            target_user_id: targetId,
+            nudger_name: myName,
+          }),
+          signal: ctrl.signal,
+        })
+        ok = r.ok
+        if (!ok) console.warn(`[sn nudge] push failed: HTTP ${r.status}`)
+      } catch (e) {
+        console.warn('[sn nudge] push error:', e?.name === 'AbortError' ? 'timeout' : e)
+      } finally {
+        clearTimeout(timer)
+      }
+      if (!ok) throw new Error("Couldn't send the reminder")
 
       setJustNudged(true)
       toast.success('🔔 Reminder sent!')
