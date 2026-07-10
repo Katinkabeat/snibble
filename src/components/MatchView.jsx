@@ -23,7 +23,10 @@ import { matcherFromBaseIds, submitMatchRound, createMatch, claimMatchWin, joinM
 import { scoreWord } from '../lib/cravingGenerator.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import BuiltWordRow from './BuiltWordRow.jsx'
-import { SQBoardShell, SQBoardHeader, SQSettingsRow } from '../../../rae-side-quest/packages/sq-ui/index.js'
+import {
+  SQBoardShell, SQBoardHeader, SQSettingsRow,
+  isNudgeEnabled, postNudge, nudgeFailureMessage,
+} from '../../../rae-side-quest/packages/sq-ui/index.js'
 
 export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [match, setMatch] = useState(null)
@@ -332,7 +335,22 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
   const lastNudged = match.last_nudged_at ? new Date(match.last_nudged_at).getTime() : 0
   const turnAge = Date.now() - lastActivity
   const nudgeAge = Date.now() - lastNudged
-  const canNudge = !justNudged && turnAge > NUDGE_COOLDOWN_MS && nudgeAge > NUDGE_COOLDOWN_MS
+  const nudgeEligible = !justNudged && turnAge > NUDGE_COOLDOWN_MS && nudgeAge > NUDGE_COOLDOWN_MS
+
+  // Snibble is 1v1, so there's exactly one person a nudge could reach — no
+  // fan-out needed, just the one pref. null = not loaded yet; the button
+  // stays hidden until it resolves (c259).
+  const opponentId = match.creator_id === user.id ? match.opponent_id : match.creator_id
+  const [nudgeAllowed, setNudgeAllowed] = useState(null)
+  useEffect(() => {
+    if (!nudgeEligible || !opponentId) { setNudgeAllowed(null); return }
+    let cancelled = false
+    isNudgeEnabled(supabase, opponentId, 'snibble')
+      .then(ok => { if (!cancelled) setNudgeAllowed(ok) })
+    return () => { cancelled = true }
+  }, [nudgeEligible, opponentId])
+
+  const canNudge = nudgeEligible && nudgeAllowed === true
 
   async function handleNudge() {
     if (nudging || !canNudge) return
@@ -344,35 +362,25 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
       if (!targetId) throw new Error('No opponent to nudge')
 
       // The push IS the nudge — await it so a dropped POST surfaces instead
-      // of a false "sent" toast (c239). 8s cap so a hung edge fn can't spin
-      // the button forever.
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 8000)
-      let ok = false
-      try {
-        const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            type: 'nudge',
-            match_id: match.id,
-            target_user_id: targetId,
-            nudger_name: myName,
-          }),
-          signal: ctrl.signal,
-        })
-        ok = r.ok
-        if (!ok) console.warn(`[sn nudge] push failed: HTTP ${r.status}`)
-      } catch (e) {
-        console.warn('[sn nudge] push error:', e?.name === 'AbortError' ? 'timeout' : e)
-      } finally {
-        clearTimeout(timer)
-      }
-      if (!ok) throw new Error("Couldn't send the reminder")
+      // of a false "sent" toast (c239), and read the 200 body rather than
+      // res.ok, since the edge fn answers 200 { sent: false } when the
+      // recipient is opted out or has no push subscription (c259).
+      //
+      // NOTE: sn_nudge stamps last_nudged_at itself, before we get here, so an
+      // undelivered nudge still burns the 12h cooldown. Wordy and Yahdle stamp
+      // only after a confirmed delivery; splitting sn_nudge into validate +
+      // mark to match needs a migration and is tracked separately.
+      const { delivered, reason } = await postNudge({
+        url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`,
+        anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        body: {
+          type: 'nudge',
+          match_id: match.id,
+          target_user_id: targetId,
+          nudger_name: myName,
+        },
+      })
+      if (!delivered) throw new Error(nudgeFailureMessage(reason))
 
       setJustNudged(true)
       toast.success('🔔 Reminder sent!')
@@ -411,7 +419,11 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
           <p className="text-[11px] text-wordy-500 mt-3 italic">
             {justNudged
               ? 'Reminder sent.'
-              : `You can nudge after 12 hours, or claim the win after 7 days (${daysUntilClaim} day${daysUntilClaim === 1 ? '' : 's'} left).`}
+              : nudgeEligible
+                // Nudgeable on the clock, but a reminder can't reach them. Say
+                // nothing about why — their notification settings are theirs.
+                ? `You can claim the win after 7 days (${daysUntilClaim} day${daysUntilClaim === 1 ? '' : 's'} left).`
+                : `You can nudge after 12 hours, or claim the win after 7 days (${daysUntilClaim} day${daysUntilClaim === 1 ? '' : 's'} left).`}
           </p>
         )}
       </div>
