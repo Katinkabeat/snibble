@@ -373,6 +373,8 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
       const { delivered, reason } = await postNudge({
         url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`,
         anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        reportUrl: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sq-report-client-error`,
+        game: 'snibble',
         body: {
           type: 'nudge',
           match_id: match.id,
