@@ -365,11 +365,6 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
       // of a false "sent" toast (c239), and read the 200 body rather than
       // res.ok, since the edge fn answers 200 { sent: false } when the
       // recipient is opted out or has no push subscription (c259).
-      //
-      // NOTE: sn_nudge stamps last_nudged_at itself, before we get here, so an
-      // undelivered nudge still burns the 12h cooldown. Wordy and Yahdle stamp
-      // only after a confirmed delivery; splitting sn_nudge into validate +
-      // mark to match needs a migration and is tracked separately.
       const { delivered, reason } = await postNudge({
         url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/snibble-push-notification`,
         anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -383,6 +378,14 @@ function WaitingForOpponentPanel({ user, match, opponentName, myName, myPlays, t
         },
       })
       if (!delivered) throw new Error(nudgeFailureMessage(reason))
+
+      // Start the 12h cooldown only now that the push actually landed. sn_nudge
+      // no longer stamps up-front (c264), so a failed send above never locks the
+      // match. A failed *stamp* must not surface as an error — the push already
+      // went out — so warn, don't throw. supabase.rpc() is a thenable, not a
+      // Promise, so await + destructure { error } rather than chaining (c261).
+      const { error: markErr } = await supabase.rpc('sn_mark_nudged', { p_match_id: match.id })
+      if (markErr) console.warn('[nudge] cooldown stamp failed:', markErr)
 
       setJustNudged(true)
       toast.success('🔔 Reminder sent!')
