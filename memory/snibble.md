@@ -12,6 +12,12 @@ to your sanctuary.
 
 - **Repo:** github.com/Katinkabeat/snibble
 - **Live:** katinkabeat.github.io/snibble/
+
+## Session: 2026-07-12 — notification-tap routing fix (c274)
+Cross-game fix for push taps opening the wrong board / doing nothing when the installed PWA is already open. Snibble's part:
+- `main.jsx` now calls `installNotificationNav()` (new sq-ui helper) — the hub SW posts a `{type:'NAVIGATE', url}` message on tap and this navigates the open app to the target match. `openWindow` was a no-op inside an already-running installed PWA on Android (the root cause). Commit `1063f9e`.
+- `App.jsx` now re-reads `?match` on `visibilitychange`/`pageshow` too (its query-string routing was re-render-on-popstate only), a secondary net. Commit `5d2cecf`.
+- Substantive fix lives in the hub (`public/sw.js` + `sq-ui/utils/notificationNav.js`); this game only wires the receiver. See `rae-side-quest` memory + auto-memory `feedback_sq_notification_click_routing`.
 - **Supabase:** shares Wordy's project (`yyhewndblruwxsrqzart`); tables
   prefixed `sn_*`.
 - **Stack:** React 18 + Vite + Tailwind + Supabase JS + react-hot-toast.
