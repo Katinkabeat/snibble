@@ -4,7 +4,7 @@
   "description": "A cozy daily word pet.",
   "start_url": "/snibble/",
   "scope": "/snibble/",
-  "display": "standalone",
+  "display": "browser",
   "orientation": "portrait",
   "theme_color": "#7c3aed",
   "background_color": "#fef3c7",
