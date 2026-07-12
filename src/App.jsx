@@ -25,10 +25,23 @@ export default function App() {
   const [, setRouteTick] = useState(0)
 
   // Re-render when the URL changes (back/forward, our own pushState).
+  //
+  // Also re-render when the tab returns to the foreground: tapping a push
+  // notification can focus an already-open tab and change the URL to a new
+  // ?match=<id> WITHOUT firing popstate, so without this the tab would stay
+  // on the previously-open match — the "opens the same board over and over"
+  // bug. visibilitychange covers app resume; pageshow covers bfcache restores.
   useEffect(() => {
     const onChange = () => setRouteTick((t) => t + 1)
     window.addEventListener('popstate', onChange)
-    return () => window.removeEventListener('popstate', onChange)
+    const onVisible = () => { if (document.visibilityState === 'visible') onChange() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onChange)
+    return () => {
+      window.removeEventListener('popstate', onChange)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onChange)
+    }
   }, [])
 
   useEffect(() => {
