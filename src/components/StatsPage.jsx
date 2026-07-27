@@ -319,11 +319,6 @@ function DateStepper({ isoDate, isToday, craving, onPrev, onNext }) {
       <div className="min-w-0 px-2 text-center">
         <div className="text-sm font-bold flex items-center justify-center gap-2">
           {formatIso(isoDate)}
-          {isToday && (
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500 text-white">
-              Today
-            </span>
-          )}
           <DifficultyStars level={craving?.difficulty} />
         </div>
         <div className="text-xs opacity-75 mt-0.5">
