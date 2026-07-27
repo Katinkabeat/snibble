@@ -63,6 +63,17 @@ export function rngFromSeed(seedString) {
 }
 
 /**
+ * Canonical daily seed for an already-resolved Atlantic calendar date
+ * ("YYYY-MM-DD"). Callers that already hold the date string — e.g. the
+ * leaderboard's date stepper — use this directly rather than round-
+ * tripping through a Date, which could shift the day across the
+ * Halifax/UTC boundary.
+ */
+export function dailySeedForIso(ymd) {
+  return `snibble:daily:${ymd}`
+}
+
+/**
  * Build the canonical daily seed string for a given Date.
  * Uses the date's YYYY-MM-DD in **Atlantic time** so all players globally
  * roll over together at the same moment (midnight America/Halifax).
@@ -79,6 +90,5 @@ export function dailySeedString(date = new Date()) {
     day: '2-digit',
   })
   // en-CA gives us "YYYY-MM-DD" exactly.
-  const ymd = fmt.format(date)
-  return `snibble:daily:${ymd}`
+  return dailySeedForIso(fmt.format(date))
 }

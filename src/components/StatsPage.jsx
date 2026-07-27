@@ -19,6 +19,8 @@ import SnibbleHeader from './SnibbleHeader.jsx'
 import { useSoloLeaderboard } from '../hooks/useSoloLeaderboard.js'
 import { useMyStats } from '../hooks/useMyStats.js'
 import { supabase } from '../lib/supabase.js'
+import { generatePuzzle } from '../lib/cravingGenerator.js'
+import { dailySeedForIso } from '../lib/rng.js'
 
 const TIMEFRAMES = [
   { key: 'day',   label: 'Day'      },
@@ -56,6 +58,33 @@ function todayInHalifax() {
     year: 'numeric', month: '2-digit', day: '2-digit',
   })
   return fmt.format(new Date())
+}
+
+// ─── That day's craving ──────────────────────────────────────
+// The daily puzzle is a pure function of its Atlantic date — the rule
+// isn't stored anywhere and there's no per-user salt — so any past
+// day's craving reconstructs client-side with no schema work. Not a
+// spoiler: the lobby already announces today's craving before you play.
+//
+// Regeneration walks the dictionary a few times, so the promise is
+// cached per date; stepping back and forth only pays the cost once per
+// day visited.
+const cravingCache = new Map()
+
+function cravingForDate(iso) {
+  if (cravingCache.has(iso)) return cravingCache.get(iso)
+  const pending = generatePuzzle(dailySeedForIso(iso))
+    .then((puzzle) => ({
+      text: puzzle.base.craving ?? puzzle.base.label,
+      difficulty: puzzle.difficulty,
+    }))
+    .catch((err) => {
+      // Don't cache a failure — a later visit should retry.
+      cravingCache.delete(iso)
+      throw err
+    })
+  cravingCache.set(iso, pending)
+  return pending
 }
 
 export default function StatsPage({ user, defaultTab = 'leaderboard', onBack }) {
@@ -122,11 +151,25 @@ function LeaderboardTab({ user, submittedToday }) {
   const [timeframe, setTimeframe] = useState('day')
   const [activeDate, setActiveDate] = useState(today)
   const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const [craving, setCraving] = useState(null)
 
   useEffect(() => {
     if (timeframe !== 'day') setActiveDate(today)
     setExpandedIds(new Set())
   }, [timeframe, today])
+
+  // Which craving was this day's board played on? Day tab only —
+  // Week/Month/All-time span many rules, so there's nothing to name.
+  useEffect(() => {
+    if (timeframe !== 'day') return
+    let active = true
+    setCraving(null)
+    cravingForDate(activeDate).then(
+      (c)  => { if (active) setCraving(c) },
+      ()   => { if (active) setCraving(null) },  // no line; board is unaffected
+    )
+    return () => { active = false }
+  }, [timeframe, activeDate])
 
   const queryDate = timeframe === 'day' ? activeDate : today
   const { rows, myRank, locked, loading, error } = useSoloLeaderboard({
@@ -164,6 +207,7 @@ function LeaderboardTab({ user, submittedToday }) {
         <DateStepper
           isoDate={activeDate}
           isToday={isToday}
+          craving={craving}
           onPrev={() => setActiveDate(addDays(activeDate, -1))}
           onNext={() => !isToday && setActiveDate(addDays(activeDate, 1))}
         />
@@ -259,33 +303,61 @@ function SegmentedControl({ options, value, onChange }) {
   )
 }
 
-function DateStepper({ isoDate, isToday, onPrev, onNext }) {
+// The stars and the craving line are both always rendered — blanked in
+// place while the puzzle regenerates rather than collapsed — so the
+// stepper doesn't change size or nudge the date sideways on load.
+function DateStepper({ isoDate, isToday, craving, onPrev, onNext }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10">
       <button
         onClick={onPrev}
         aria-label="Previous day"
-        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white"
+        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white shrink-0"
       >
         ‹
       </button>
-      <div className="text-sm font-bold flex items-center gap-2">
-        {formatIso(isoDate)}
-        {isToday && (
-          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500 text-white">
-            Today
-          </span>
-        )}
+      <div className="min-w-0 px-2 text-center">
+        <div className="text-sm font-bold flex items-center justify-center gap-2">
+          {formatIso(isoDate)}
+          {isToday && (
+            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500 text-white">
+              Today
+            </span>
+          )}
+          <DifficultyStars level={craving?.difficulty} />
+        </div>
+        <div className="text-xs opacity-75 mt-0.5">
+          {craving
+            ? <>craving: <span className="font-bold">{craving.text}</span></>
+            : ' '}
+        </div>
       </div>
       <button
         onClick={onNext}
         disabled={isToday}
         aria-label="Next day"
-        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white disabled:opacity-30 disabled:hover:bg-white/5 disabled:cursor-not-allowed"
+        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white disabled:opacity-30 disabled:hover:bg-white/5 disabled:cursor-not-allowed shrink-0"
       >
         ›
       </button>
     </div>
+  )
+}
+
+// Same 3-star difficulty read the lobby shows next to today's craving.
+// `invisible` (not unmounted) while unknown so the row keeps its width.
+function DifficultyStars({ level }) {
+  const filled = level ?? 0
+  const name = filled === 1 ? 'easy' : filled === 2 ? 'medium' : 'hard'
+  return (
+    <span
+      className={`text-[11px] tracking-wide shrink-0 ${level ? '' : 'invisible'}`}
+      title={level ? `${name} day` : undefined}
+      aria-hidden={!level}
+    >
+      <span className="text-amber-400">{'★'.repeat(filled)}</span>
+      <span className="text-amber-400/25">{'★'.repeat(3 - filled)}</span>
+    </span>
   )
 }
 
