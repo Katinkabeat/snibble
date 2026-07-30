@@ -668,6 +668,65 @@ the Supabase dashboard SQL editor instead. Pinning model lives in
 - **Per-game theme key** — Snibble uses `snibble-theme` localStorage
   key. Wordy uses `wordy-theme`. Each game tracks its own theme
   preference (no cross-game sync).
+- **`played_at` is the START of the day, not the finish.** `sn_daily_feeds`
+  is ONE MUTABLE ROW per (user_id, feed_date); `played_at` is frozen at
+  the first feed and never advances. Use `completed_at` for anything
+  that means "when did they submit" — ordering, cursors, tie-breaks.
+  This bit the leaderboard tie-break (see 2026-07-30 session).
+
+
+### Session: 2026-07-30 — Leaderboard tie-break ordered on the wrong timestamp
+
+Rae and Dean both scored 80 on the daily. Dean finished 63 seconds
+ahead, and Rae took first place anyway.
+
+**Cause:** both leaderboard RPCs tie-broke on `played_at asc`, which is
+frozen at the row's *first feed of the day*, so the tie-break was
+first-to-START not first-to-SUBMIT. Rae opened the daily at 12:12am
+Atlantic and finished in the morning; her 11-hour-old start timestamp
+outranked Dean's earlier finish. Prod rows confirmed it:
+
+| user | score | played_at | completed_at |
+|---|---|---|---|
+| Rae  | 80 | 03:12:23Z | 12:23:33Z |
+| Dino | 80 | 12:08:08Z | **12:22:30Z** |
+
+The functions' own comments claimed "first-submitted wins ties", which
+is why it went unnoticed for ~2.5 months. `completed_at` already
+existed — added for Rook's `snibble_mouthful` trigger — and its
+migration note even spells out that `played_at` can't serve as a
+finish cursor. Nobody circled back to the leaderboard.
+
+**Fix** (`sn_leaderboard_tiebreak_completed_at.sql`): tie-break on
+`coalesce(f.completed_at, f.played_at)` in all four places — the day
+branch and aggregate branch of `sn_solo_leaderboard`, and both `rank()`
+windows in `sn_solo_my_rank`. The coalesce keeps pre-`completed_at`
+history ordering as it does today instead of sorting as NULL. The
+returned `played_at` column is left alone (part of the signature, and
+nothing in `src` reads it) — only the ORDER BY changed, so no client
+change and no rebuild.
+
+Both functions had to change together: if `my_rank` and the list
+disagree on the tie-break, a player's "you are #N" badge contradicts
+the board they're looking at.
+
+**Also dropped** `sn_daily_leaderboard(date)`
+(`sn_drop_legacy_daily_leaderboard.sql`) — superseded by c92 on
+2026-05-19 with an explicit "drop in a follow-up" note that never
+happened. It carried the identical tie-break bug *because* it was a
+duplicate, and the 2026-05-13 privacy fix had to be written into it
+separately too. Confirmed uncalled first: nothing in `snibble/src`,
+nothing in the workspace, and nothing in `/opt/rook` on the rae VM
+(`rook-leaderboard` calls its own `rook_weekly_leaderboards`).
+
+**Verified** against prod as Rae's real authed identity (service_role
++ `request.jwt.claims` in a rolled-back txn, per
+`feedback_sq_verification_constraint`) — no dev server:
+- day tab → Dino first, Rae second
+- `sn_solo_my_rank('day')` → rank 2, agreeing with the list
+- week / all-time still return rows
+- play-to-see gate intact: a non-submitter gets 0 rows for today, past
+  days still open
 
 
 ### Session: 2026-05-20 — MP easing + 4-letter floor + persisted daily puzzles (c10)

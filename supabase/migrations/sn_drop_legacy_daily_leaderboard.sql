@@ -1,0 +1,35 @@
+-- ============================================================
+-- Snibble — drop the superseded sn_daily_leaderboard(date) RPC.
+--
+-- Replaced on 2026-05-19 (c92) by sn_solo_leaderboard +
+-- sn_solo_my_rank, which added Day/Week/Month/All-time and the date
+-- stepper. sn_extended_leaderboards.sql said at the time: "Old
+-- sn_daily_leaderboard(date) is left alive so the live site keeps
+-- working until the new client code deploys; drop in a follow-up."
+-- The follow-up never happened, so it sat deployed and uncalled for
+-- ~2.5 months.
+--
+-- Why drop rather than fix: it carried the same played_at tie-break
+-- bug fixed in sn_leaderboard_tiebreak_completed_at.sql, because it
+-- is a duplicate of logic that lives elsewhere. The 2026-05-13
+-- leaderboard privacy fix (in-progress words visible to opponents)
+-- also had to be written into it separately. Keeping a second copy
+-- alive preserves the thing that caused the bug.
+--
+-- It is also an `authenticated`-callable SECURITY DEFINER function
+-- that bypasses RLS on sn_daily_feeds and returns other players'
+-- words_fed. Its privacy gate is sound, but one fewer definer
+-- function is one fewer thing to re-audit.
+--
+-- Verified uncalled before dropping (2026-07-30):
+--   * no reference in snibble/src (client uses sn_solo_leaderboard /
+--     sn_solo_my_rank only)
+--   * no reference anywhere in the local workspace outside its own
+--     migration + the session log
+--   * Rook on the rae VM: no reference in /opt/rook; rook-leaderboard
+--     calls its own rook_weekly_leaderboards RPC
+--
+-- Reversible: re-run sn_daily_leaderboard.sql to restore it.
+-- ============================================================
+
+drop function if exists public.sn_daily_leaderboard(date);
