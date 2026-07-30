@@ -21,6 +21,7 @@ import { useMyStats } from '../hooks/useMyStats.js'
 import { supabase } from '../lib/supabase.js'
 import { generatePuzzle } from '../lib/cravingGenerator.js'
 import { dailySeedForIso } from '../lib/rng.js'
+import { RULES_BY_ID } from '../lib/rules.js'
 
 const TIMEFRAMES = [
   { key: 'day',   label: 'Day'      },
@@ -61,28 +62,59 @@ function todayInHalifax() {
 }
 
 // ─── That day's craving ──────────────────────────────────────
-// The daily puzzle is a pure function of its Atlantic date — the rule
-// isn't stored anywhere and there's no per-user salt — so any past
-// day's craving reconstructs client-side with no schema work. Not a
-// spoiler: the lobby already announces today's craving before you play.
+// READ THE STORED PUZZLE FIRST. sn_daily_puzzles pins each day's
+// base_rule_ids + difficulty, and that row is the only record of what
+// players actually fed.
 //
-// Regeneration walks the dictionary a few times, so the promise is
-// cached per date; stepping back and forth only pays the cost once per
-// day visited.
+// This used to regenerate from the date seed instead, on the reasoning
+// that the puzzle is a pure function of its Atlantic date. That holds
+// only while the rule pool never changes. It changed on 2026-07-30
+// (two exact-length rules retired, nine word-shape rules added), and
+// because weightedPick samples across the whole pool, editing the pool
+// shifts what EVERY historical seed regenerates to. Regeneration would
+// have quietly started naming a craving nobody played, and gotten
+// further from the truth with every future rule change.
+//
+// Regeneration stays as a fallback for days with no stored row (the
+// table landed 2026-05-20, so earlier days have none). Those are
+// pre-change days, so the seed still reproduces them faithfully.
+// Not a spoiler either way: the lobby announces today's craving before
+// you play.
+//
+// Cached per date as a promise, so stepping back and forth pays at most
+// one round trip (or one dictionary walk) per day visited.
 const cravingCache = new Map()
+
+async function loadCraving(iso) {
+  const { data, error } = await supabase
+    .from('sn_daily_puzzles')
+    .select('base_rule_ids, difficulty')
+    .eq('puzzle_date', iso)
+    .maybeSingle()
+
+  if (!error && data) {
+    const rule = RULES_BY_ID[data.base_rule_ids?.[0]]
+    // RULES_BY_ID carries RETIRED_RULES too, so a day played on a rule
+    // that's since been pulled from the pool still names itself.
+    if (rule) {
+      return { text: rule.craving ?? rule.label, difficulty: data.difficulty }
+    }
+  }
+
+  const puzzle = await generatePuzzle(dailySeedForIso(iso))
+  return {
+    text: puzzle.base.craving ?? puzzle.base.label,
+    difficulty: puzzle.difficulty,
+  }
+}
 
 function cravingForDate(iso) {
   if (cravingCache.has(iso)) return cravingCache.get(iso)
-  const pending = generatePuzzle(dailySeedForIso(iso))
-    .then((puzzle) => ({
-      text: puzzle.base.craving ?? puzzle.base.label,
-      difficulty: puzzle.difficulty,
-    }))
-    .catch((err) => {
-      // Don't cache a failure — a later visit should retry.
-      cravingCache.delete(iso)
-      throw err
-    })
+  const pending = loadCraving(iso).catch((err) => {
+    // Don't cache a failure — a later visit should retry.
+    cravingCache.delete(iso)
+    throw err
+  })
   cravingCache.set(iso, pending)
   return pending
 }

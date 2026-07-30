@@ -198,24 +198,9 @@ const specialRules = [
 
 // ───────── Length rules ─────────
 // Word-length buckets — slice the dictionary cleanly and pair well
-// with most other families. Highest leverage of any single addition.
+// with most other families. Only the 7+ FLOOR survives; see
+// RETIRED_RULES below for why the exact-length ones were pulled.
 const lengthRules = [
-  {
-    id: 'length:exact-5',
-    family: 'length',
-    label: 'exactly 5 letters',
-    craving: 'a 5-letter word',
-    matches: (w) => w.length === 5,
-    weight: 4,
-  },
-  {
-    id: 'length:exact-6',
-    family: 'length',
-    label: 'exactly 6 letters',
-    craving: 'a 6-letter word',
-    matches: (w) => w.length === 6,
-    weight: 4,
-  },
   {
     id: 'length:7-plus',
     family: 'length',
@@ -278,6 +263,139 @@ const patternRules = [
   },
 ]
 
+// ───────── Word-shape rules (added 2026-07-30) ─────────
+// Whole-word shapes, as opposed to the pattern family above which only
+// looks at the first or last two letters. Weight 3 across the board is
+// the value they were measured at (see scripts/measure-candidate-rules.mjs)
+// — don't raise one without re-running that script, since a rule that
+// gets too broad silently stops appearing rather than erroring.
+const shapeRules = [
+  {
+    id: 'shape:same-start-end',
+    family: 'shape',
+    label: 'starts and ends with the same letter',
+    craving: 'a word starting and ending with the same letter',
+    matches: (w) => w.length >= 4 && w[0] === w[w.length - 1],
+    weight: 3,
+  },
+  {
+    id: 'shape:ends-double',
+    family: 'shape',
+    label: 'ends in a double letter',
+    craving: 'a word ending in a double letter',
+    matches: (w) => w.length >= 4 && w[w.length - 1] === w[w.length - 2],
+    weight: 3,
+  },
+  {
+    id: 'shape:vowel-bookends',
+    family: 'shape',
+    label: 'starts and ends with a vowel',
+    craving: 'a word starting and ending with a vowel',
+    matches: (w) => w.length >= 4 && isVowel(w[0]) && isVowel(w[w.length - 1]),
+    weight: 3,
+  },
+  {
+    id: 'shape:three-consonants',
+    family: 'shape',
+    label: 'has three consonants in a row',
+    craving: 'a word with three consonants in a row',
+    matches: (w) => {
+      if (w.length < 4) return false
+      for (let i = 0; i + 2 < w.length; i++) {
+        if (!isVowel(w[i]) && !isVowel(w[i + 1]) && !isVowel(w[i + 2])) return true
+      }
+      return false
+    },
+    weight: 3,
+  },
+  {
+    id: 'shape:alternating',
+    family: 'shape',
+    label: 'alternates vowels and consonants',
+    craving: 'a word alternating vowels and consonants',
+    matches: (w) => {
+      if (w.length < 4) return false
+      for (let i = 1; i < w.length; i++) {
+        if (isVowel(w[i]) === isVowel(w[i - 1])) return false
+      }
+      return true
+    },
+    weight: 3,
+  },
+  {
+    id: 'shape:vowel-heavy',
+    family: 'shape',
+    label: 'has more vowels than consonants',
+    // Strictly more than half the letters are vowels. Y counts as a
+    // consonant here, same as everywhere else in this file.
+    craving: 'a word with more vowels than consonants',
+    matches: (w) => w.length >= 4 && vowelCount(w) * 2 > w.length,
+    weight: 3,
+  },
+]
+
+// ───────── Single-vowel rules ─────────
+// Constrains WHICH vowel appears, not how many — so repeats are fine
+// (BANANA satisfies only-A). Distinct from letterset:one-vowel, which
+// caps the COUNT at one. A/E/O only: I and U can't seed enough common
+// words from a 7-letter tray.
+const SINGLE_VOWELS = ['A', 'E', 'O']
+
+const singleVowelRules = SINGLE_VOWELS.map((v) => ({
+  id: `vowelset:only-${v.toLowerCase()}`,
+  family: 'vowelset',
+  label: `uses only the vowel ${v}`,
+  craving: `a word using only the vowel ${v}`,
+  matches: (w) => {
+    if (w.length < 4) return false
+    let seen = false
+    for (const c of w) {
+      if (!isVowel(c)) continue
+      if (c !== v) return false
+      seen = true
+    }
+    return seen
+  },
+  weight: 3,
+}))
+
+// ───────── Retired rules ─────────
+// Pulled from the sampling pool 2026-07-30 but deliberately still
+// defined, because they are looked up BY ID in two places that outlive
+// the pool:
+//   1. sn_daily_puzzles stores each past day's base_rule_ids, and
+//      dailyPuzzle.js resolves them through RULES_BY_ID to render the
+//      craving. Deleting these blanks the craving on historical days.
+//   2. sn_match_rounds does the same for in-flight match rounds, so
+//      deleting mid-round would break word validation for that match.
+//
+// Why they went: scoring is 1 point per letter (cravingGenerator's
+// scoreWord), so on an exact-length day every legal word is worth the
+// same and a player's total collapses to (length × words fed). Everyone
+// who filled the pet landed on an identical score, and the leaderboard
+// was decided purely by submit time. The 7+ FLOOR has no such problem —
+// length still varies above it.
+//
+// Do NOT put these back in BASE_RULES. Note also that setting weight: 0
+// would NOT retire a rule: weightedPick does `it.weight || 1`, so a
+// zero weight silently becomes 1.
+export const RETIRED_RULES = [
+  {
+    id: 'length:exact-5',
+    family: 'length',
+    label: 'exactly 5 letters',
+    craving: 'a 5-letter word',
+    matches: (w) => w.length === 5,
+  },
+  {
+    id: 'length:exact-6',
+    family: 'length',
+    label: 'exactly 6 letters',
+    craving: 'a 6-letter word',
+    matches: (w) => w.length === 6,
+  },
+]
+
 // ───────── Aggregated base-rule pool ─────────
 export const BASE_RULES = [
   ...suffixRules,
@@ -287,10 +405,18 @@ export const BASE_RULES = [
   ...lengthRules,
   ...lettersetRules,
   ...patternRules,
+  ...shapeRules,
+  ...singleVowelRules,
 ]
 
-/** Map of id → rule for easy lookup. */
-export const RULES_BY_ID = Object.fromEntries(BASE_RULES.map((r) => [r.id, r]))
+/**
+ * Map of id → rule for easy lookup. Includes RETIRED_RULES so stored
+ * puzzles and in-flight match rounds referencing a retired id still
+ * resolve — see the RETIRED_RULES comment above.
+ */
+export const RULES_BY_ID = Object.fromEntries(
+  [...BASE_RULES, ...RETIRED_RULES].map((r) => [r.id, r])
+)
 
 // ───────── Phase modifiers (length + bonus) ─────────
 

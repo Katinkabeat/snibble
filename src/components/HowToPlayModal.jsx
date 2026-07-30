@@ -65,6 +65,11 @@ export default function HowToPlayModal({ onClose }) {
               Tap a tray letter to add it to your word, tap a built tile to remove it.
               Hit <b>Feed 🍃</b> to send it to your pet.
             </p>
+            <p className="text-xs text-wordy-500 italic mt-2">
+              When a craving mentions vowels, the vowels are A, E, I, O, U. <b>Y always
+              counts as a consonant.</b> So CRYBABY opens with three consonants in a row
+              (C, R, Y), and RHYTHM has no vowels at all.
+            </p>
           </Section>
 
           <Section title="🥕 What counts">

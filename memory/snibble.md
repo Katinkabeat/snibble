@@ -675,6 +675,97 @@ the Supabase dashboard SQL editor instead. Pinning model lives in
   This bit the leaderboard tie-break (see 2026-07-30 session).
 
 
+### Session: 2026-07-30 — Retired the exact-length rules, added 9 word-shape rules
+
+Same session as the tie-break fix below, and the two turned out to be
+one incident: **today's stored puzzle was `length:exact-5`**. Rae and
+Dean both scored 80 because on an exact-length day every legal word is
+worth the same (scoring is 1 point per letter), so a total collapses to
+`length × words fed`. They each fed 16 words, tied exactly, and the
+tie-break then decided it wrongly.
+
+**Retired** (Rae's call): `length:exact-5`, `length:exact-6`. The
+`length:7-plus` FLOOR stays, since length still varies above a floor.
+
+**Retired, NOT deleted** — this matters and was nearly a live outage.
+`GameView.jsx:114` does `RULES_BY_ID[puzzle.base.id]` and line 166 calls
+`baseRule.matches(word)` on every feed. Today's live puzzle is on
+`length:exact-5`. Deleting the definitions would have made `baseRule`
+undefined and thrown on every word fed, mid-day, for everyone. So both
+rules stay defined in a new exported `RETIRED_RULES`, merged into
+`RULES_BY_ID` but kept out of `BASE_RULES`. `sn_match_rounds` resolves
+ids the same way, so in-flight matches had the same exposure.
+Also note: `weight: 0` does NOT retire a rule — `weightedPick` does
+`it.weight || 1`, so zero silently becomes one.
+
+**Added** two new families, all at weight 3, the value they were
+measured at:
+- `shape:*` — same-start-end, ends-double, vowel-bookends,
+  three-consonants, alternating, vowel-heavy
+- `vowelset:only-a` / `only-e` / `only-o` — constrains WHICH vowel, not
+  how many, so repeats are fine (BANANA satisfies only-A). I and U were
+  left out; they can't seed enough common words from a 7-letter tray.
+
+A tenth candidate, "uses the same letter twice not side by side", was
+**cut by Rae** after measurement: it structurally favours reduplicated
+baby-talk (TATTOO, VOODOO, ABBA, BABA, DADA) for the most attempts and
+the least interesting output.
+
+**Craving strings went through Raven and Rae approved them** before they
+landed, per the player-facing-copy convention.
+
+**How to Play** gained a note that Y always counts as a consonant, since
+`shape:three-consonants` and `shape:vowel-heavy` both depend on it
+(CRYBABY opens with C, R, Y). That was already true of the existing
+"3+ vowels" rule and undocumented. Existing How to Play copy was left
+alone rather than rewritten unasked, so note it still contains em dashes
+while the new line does not.
+
+**A measurement lesson worth keeping.** First pass judged the candidates
+by win count in the shared pool over 120 seeds and called five of them
+"too broad". That was wrong: at weight 3 in a ~95-rule pool the expected
+share is about 1 day in 120, so zero wins is noise, not a verdict. The
+generator also re-picks a rule on every attempt, so "too broad, always
+rejected" and "never sampled" look identical from the outside. The fix
+is `scripts/measure-candidate-rules.mjs`, which puts each rule ALONE in
+the pool so the full 150-attempt budget is spent on it. Under that, all
+ten passed 40/40 seeds. The tray builder is why — it builds the tray
+*from* anchor words, so even a rule matching 58% of the dictionary still
+lands in the 12..30 band.
+
+Second lesson: `avg tries` is a bad cost proxy. only-o averaged 19 tries
+vs `suffix:IN`'s far fewer, but measured wall-clock says only-o is p50
+121ms / max 440ms while `suffix:IN` (shipped since launch) is p50 225ms
+/ max 1,647ms. A cheap early-bailing attempt and a full dictionary scan
+both count as one try. Players are unaffected regardless: `loadDailyPuzzle`
+reads `sn_daily_puzzles` first, so only the day's FIRST player generates
+anything at all.
+
+**c304 fold-in (also Rae's call).** `StatsPage.cravingForDate` used to
+re-run the generator on a past day's seed, on the reasoning that the
+puzzle is a pure function of its date. That only holds while the pool
+never changes. Verified with `scripts/verify-rule-retirement.mjs`
+against the 10 most recent stored puzzles: **10/10 days now regenerate
+to a different rule.** Without this fix the leaderboard stepper would
+name a craving nobody played, for every historical day. It now reads
+`base_rule_ids` + `difficulty` from `sn_daily_puzzles` and resolves
+through `RULES_BY_ID`, falling back to regeneration only for days older
+than that table (pre 2026-05-20), which are pre-change and so still
+reproduce faithfully.
+
+**Verified, no dev server** (per Rae's standing rule):
+- `scripts/measure-candidate-rules.mjs` — 9/9 new rules 40/40 seeds, no
+  generator hard-fails across 120 shared seeds, 46 distinct rules used,
+  retired rules never picked, no weight-0 rules
+- `scripts/verify-rule-retirement.mjs` — all 10 stored ids resolve with a
+  working matcher; retired matchers probed directly
+  (`exact-5.matches('GROWS')` true, `('GROW')` false)
+- `npm run build` clean, 132 modules
+
+Both scripts are committed and are the regression checks for any future
+rule-pool change.
+
+
 ### Session: 2026-07-30 — Leaderboard tie-break ordered on the wrong timestamp
 
 Rae and Dean both scored 80 on the daily. Dean finished 63 seconds
