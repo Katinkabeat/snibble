@@ -55,7 +55,11 @@ begin
   if not exists (select 1 from public.admins where admins.user_id = auth.uid()) then
     raise exception 'sn_admin_reset_leaderboard: caller is not an admin';
   end if;
-  delete from public.sn_daily_feeds;
+  -- WHERE matches every row (user_id is NOT NULL) but must be present:
+  -- PostgREST sessions preload pg_safeupdate, which rejects unfiltered
+  -- DELETEs even inside functions (same bug as sq_passed_on_leaderboard,
+  -- fixed 2026-08-12).
+  delete from public.sn_daily_feeds where user_id is not null;
 end;
 $$;
 

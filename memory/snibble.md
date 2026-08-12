@@ -1053,3 +1053,6 @@ Follow-up to the 2026-07-14 stale-notification investigation (c285): battery sav
 
 ## 2026-08-03 — Craving copy pluralized
 Every `craving` string in `src/lib/rules.js` was singular ("a word ending in -ING"), so the daily banner read "Mossy is hungry for **a** word ending in -ING" — wrong for a rule that wants as many qualifying words as you can feed. All 21 are now plural ("words ending in -ING"), including `long words (7+ letters)` and the two RETIRED_RULES length cravings (still rendered on historical days). Rule ids untouched. Reads correctly at all four render sites: GameView banner + turn-away toast, LobbyView teaser, StatsPage day line.
+
+## 2026-08-12 — sn_admin_reset_leaderboard: unfiltered DELETE would 500 under pg_safeupdate (c334)
+Fallout from the sq-passed-on-leaderboard fix: Supabase preloads pg_safeupdate on the `authenticator` role, so any RPC called via PostgREST rejects unfiltered DELETE/UPDATE even inside SECURITY DEFINER plpgsql. `sn_admin_reset_leaderboard()` (`supabase/migrations/sn_app_settings.sql`) did `delete from sn_daily_feeds;` — it would have 500'd the moment the admin reset was used from the app. Now `where user_id is not null` + a comment naming the guard; re-applied to the live DB via psql. sn_daily_feeds untouched (314 rows before and after).
