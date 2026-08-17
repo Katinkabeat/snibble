@@ -490,8 +490,40 @@ function CompletedPanel({ user, match, rounds, myPlays, theirPlays, opponentName
     if (rematching) return
     setRematching(true)
     try {
-      const newMatch = await createMatch({ userId: user.id })
-      toast.success('New match posted — your opponent can rejoin.')
+      const opponentId = match.creator_id === user.id ? match.opponent_id : match.creator_id
+
+      if (!opponentId) {
+        // No resolvable opponent (admin-closed or other edge case) — fall
+        // back to an open match anyone can join, and say so honestly.
+        const newMatch = await createMatch({ userId: user.id })
+        toast.success('Open rematch posted — anyone can join.')
+        onRematch(newMatch.id)
+        return
+      }
+
+      // Durable double-rematch gate — `rematching` above is local state,
+      // so re-opening this completed match remounts the panel and shows a
+      // fresh button. Check for an already-posted pending invite first so
+      // repeat visits can't fire off duplicates.
+      const { data: existing, error: existingErr } = await supabase
+        .from('sn_matches')
+        .select('id')
+        .eq('status', 'open')
+        .eq('creator_id', user.id)
+        .eq('invited_user_id', opponentId)
+        .gte('created_at', match.completed_at)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (existingErr) throw existingErr
+      if (existing) {
+        toast('Rematch invite already sent.')
+        onRematch(existing.id)
+        return
+      }
+
+      const newMatch = await createMatch({ userId: user.id, invitedUserId: opponentId })
+      toast.success(`Rematch invite sent to ${opponentName}.`)
       onRematch(newMatch.id)
     } catch (err) {
       console.error('[rematch] failed', err)
