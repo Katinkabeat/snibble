@@ -34,6 +34,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   const [plays, setPlays] = useState([])  // all plays (mine + theirs, all rounds)
   const [opponent, setOpponent] = useState(null)
   const [creator, setCreator] = useState(null)
+  const [invitee, setInvitee] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
@@ -58,7 +59,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
         if (rErr) throw rErr
         if (pErr) throw pErr
 
-        const userIds = [m.creator_id, m.opponent_id].filter(Boolean)
+        const userIds = [m.creator_id, m.opponent_id, m.invited_user_id].filter(Boolean)
         const { data: profileRows } = await supabase
           .from('profiles').select('id, username, avatar_hue').in('id', userIds)
         const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]))
@@ -69,6 +70,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
         setPlays(pRows ?? [])
         setCreator(profileById.get(m.creator_id) ?? null)
         setOpponent(m.opponent_id ? profileById.get(m.opponent_id) ?? null : null)
+        setInvitee(m.invited_user_id ? profileById.get(m.invited_user_id) ?? null : null)
         setError(null)
       } catch (err) {
         if (!active) return
@@ -235,7 +237,7 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
               <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">One sec, joining the match.</p>
             </div>
           )}
-          {match.status === 'open' && match.invited_user_id !== user.id && <OpenMatchPanel match={match} />}
+          {match.status === 'open' && match.invited_user_id !== user.id && <OpenMatchPanel match={match} invitee={invitee} />}
 
           {match.status === 'in_progress' && currentRound && (
             <RoundPlayPanel
@@ -300,13 +302,18 @@ function resolvedRounds(rounds, myPlays, theirPlays, userId) {
 
 // ───────── Panels ─────────
 
-function OpenMatchPanel({ match }) {
+function OpenMatchPanel({ match, invitee }) {
+  const isInvite = match.invited_user_id != null
   return (
     <div className="card p-6 text-center">
-      <p className="text-4xl mb-3">🪧</p>
-      <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">Match posted</p>
+      <p className="text-4xl mb-3">{isInvite ? '📨' : '🪧'}</p>
+      <p className="font-display text-lg text-wordy-800 dark:text-wordy-100">
+        {isInvite ? 'Invite sent' : 'Match posted'}
+      </p>
       <p className="text-sm text-wordy-600 dark:text-wordy-300 mt-2">
-        Waiting for someone to join from their lobby's match list.
+        {isInvite
+          ? `Waiting for ${invitee?.username ?? 'your friend'} to accept.`
+          : "Waiting for someone to join from their lobby's match list."}
       </p>
       <p className="text-xs text-wordy-500 mt-3 italic">
         Single round
