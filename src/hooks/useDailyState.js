@@ -208,5 +208,24 @@ export function useDailyState({ userId, petId }) {
     if (error) console.error('[useDailyState] markComplete error', error)
   }
 
-  return { state, recordFeed, onFirstFeed, markComplete, resetToday }
+  /**
+   * Test-account replay (c332): delete today's sn_daily_feeds row via the
+   * membership-gated sn_test_reset_today() RPC, then reset local state to a
+   * fresh day so the player drops straight back into today's puzzle. The
+   * server re-checks membership on every call — this is convenience only;
+   * a non-member calling it (button never renders for them, but belt and
+   * suspenders) gets a raised exception from the RPC instead of a wiped row.
+   */
+  async function replayAsTestAccount() {
+    if (!userId) return
+    const { error } = await supabase.rpc('sn_test_reset_today')
+    if (error) {
+      console.error('[useDailyState] replayAsTestAccount error', error)
+      throw error
+    }
+    expiredRef.current = false
+    setState({ wordsFed: [], score: 0, isComplete: false, expired: false, loaded: true })
+  }
+
+  return { state, recordFeed, onFirstFeed, markComplete, resetToday, replayAsTestAccount }
 }

@@ -76,18 +76,45 @@ export function useMyStats(userId) {
 
         const petsRaised = (progressRows ?? []).filter((p) => p.graduated_at).length
 
+        // c332: any completed match with a test-account member seated
+        // (creator OR opponent) is dropped from win/loss/tie/rounds stats
+        // for BOTH players — one sq_test_account_ids call over every seat
+        // in the caller's completed matches decides which whole matches to
+        // drop. Lifetime word totals above are NOT filtered — the rule
+        // only calls out win/loss/tie/rounds, and word count is a personal
+        // tally, not a competitive stat.
+        const seatIds = new Set()
+        for (const m of matchRows ?? []) {
+          if (m.creator_id) seatIds.add(m.creator_id)
+          if (m.opponent_id) seatIds.add(m.opponent_id)
+        }
+        let excludedMatchIds = new Set()
+        if (seatIds.size > 0) {
+          const { data: testIds, error: testErr } = await supabase.rpc('sq_test_account_ids', {
+            uids: [...seatIds],
+          })
+          if (testErr) throw testErr
+          const testIdSet = new Set(testIds ?? [])
+          excludedMatchIds = new Set(
+            (matchRows ?? [])
+              .filter((m) => testIdSet.has(m.creator_id) || testIdSet.has(m.opponent_id))
+              .map((m) => m.id)
+          )
+        }
+        const statsMatchRows = (matchRows ?? []).filter((m) => !excludedMatchIds.has(m.id))
+
         // Multiplayer aggregates
-        const matchesPlayed = matchRows?.length ?? 0
-        const wins = (matchRows ?? []).filter((m) => m.winner_id === userId).length
-        const ties = (matchRows ?? []).filter((m) => !m.winner_id).length
+        const matchesPlayed = statsMatchRows.length
+        const wins = statsMatchRows.filter((m) => m.winner_id === userId).length
+        const ties = statsMatchRows.filter((m) => !m.winner_id).length
         const losses = matchesPlayed - wins - ties
 
         // Rounds won — for each completed match, count rounds where my
         // score beat my opponent's. Group plays by (match, round).
         let roundsWon = 0
         let totalRoundsPlayed = 0
-        if (matchRows && matchRows.length > 0) {
-          const completedMatchIds = new Set(matchRows.map((m) => m.id))
+        if (statsMatchRows.length > 0) {
+          const completedMatchIds = new Set(statsMatchRows.map((m) => m.id))
           const playsByMatchRound = new Map()
           for (const p of matchPlays ?? []) {
             if (!completedMatchIds.has(p.match_id)) continue

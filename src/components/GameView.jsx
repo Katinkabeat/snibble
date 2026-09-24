@@ -21,6 +21,7 @@ import { isValidWord } from '../lib/dictionary.js'
 import { RULES_BY_ID } from '../lib/rules.js'
 import { useActivePet } from '../hooks/useActivePet.js'
 import { useDailyState } from '../hooks/useDailyState.js'
+import { supabase } from '../lib/supabase.js'
 import SnibbleHeader from './SnibbleHeader.jsx'
 import BuiltWordRow from './BuiltWordRow.jsx'
 import { PET_COMPONENTS } from '../lib/pets.jsx'
@@ -31,14 +32,26 @@ export default function GameView({ user, onBack }) {
   const [puzzle, setPuzzle] = useState(null)
   const [puzzleErr, setPuzzleErr] = useState(null)
   const { petInfo, loading: petLoading, tickGrowth } = useActivePet(user.id)
-  const { state: dailyState, recordFeed, onFirstFeed, markComplete } = useDailyState({
+  const { state: dailyState, recordFeed, onFirstFeed, markComplete, replayAsTestAccount } = useDailyState({
     userId: user.id,
     petId: petInfo?.petId,
   })
+  // Test-account members (c332) get a "Replay" button on the already-done
+  // screen — cosmetic gate only, sn_test_reset_today() re-checks membership
+  // server-side on the write itself.
+  const [isTestAccount, setIsTestAccount] = useState(false)
 
   useEffect(() => {
     onFirstFeed(async () => { await tickGrowth() })
   }, [onFirstFeed, tickGrowth])
+
+  useEffect(() => {
+    let active = true
+    supabase.rpc('sq_is_test_account', { uid: user.id })
+      .then(({ data }) => { if (active) setIsTestAccount(!!data) })
+      .catch(() => { if (active) setIsTestAccount(false) })
+    return () => { active = false }
+  }, [user.id])
 
   useEffect(() => {
     let active = true
@@ -61,6 +74,8 @@ export default function GameView({ user, onBack }) {
         onFeed={recordFeed}
         onMarkComplete={markComplete}
         onBack={onBack}
+        isTestAccount={isTestAccount}
+        onReplay={replayAsTestAccount}
       />
     </ShellWithHeader>
   )
@@ -92,7 +107,7 @@ function Loading({ err }) {
 
 // ─────────────────────────────────────────────────────────────
 
-function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, onBack }) {
+function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, onBack, isTestAccount, onReplay }) {
   const [built, setBuilt] = useState([])
   const [busy, setBusy] = useState(false)
   const [chomping, setChomping] = useState(false)
@@ -212,6 +227,29 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
     window.dispatchEvent(new PopStateEvent('popstate'))
   }
 
+  // Test-account replay (c332): drop back onto a fresh copy of today's
+  // puzzle. onReplay (sn_test_reset_today, membership re-checked server-
+  // side) clears the daily row and local dailyState; the rest here just
+  // resets this component's own UI state so the toasts/tray behave like a
+  // brand-new day. Re-ticking pet growth on the replay's first feed is an
+  // accepted side effect, not guarded against.
+  async function handleReplay() {
+    try {
+      await onReplay()
+    } catch (e) {
+      console.error('[GameView] replay failed', e)
+      toast.error("Couldn't reset today's daily")
+      return
+    }
+    setBuilt([])
+    setChomping(false)
+    setConfirmingDone(false)
+    setTrayLetters([...puzzle.letters])
+    milestonesRef.current = new Set()
+    parToastShownRef.current = false
+    expiredToastRef.current = false
+  }
+
   const PetComponent = PET_COMPONENTS[petInfo.petId] ?? PET_COMPONENTS.mossy
 
   return (
@@ -243,6 +281,8 @@ function GameLoop({ user, puzzle, petInfo, dailyState, onFeed, onMarkComplete, o
             expired={expired}
             onBackToLobby={onBack}
             onViewLeaderboard={goToStats}
+            isTestAccount={isTestAccount}
+            onReplay={handleReplay}
           />
         </>
       ) : (
@@ -385,7 +425,7 @@ function FullnessBar({ fed, total, par }) {
   )
 }
 
-function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, expired, onBackToLobby, onViewLeaderboard }) {
+function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, expired, onBackToLobby, onViewLeaderboard, isTestAccount, onReplay }) {
   const gotThemAll = fedCount >= totalSolutions
   const pastPar = parCount > 0 && fedCount >= parCount
   return (
@@ -414,6 +454,16 @@ function CompleteCard({ petName, score, fedCount, totalSolutions, parCount, expi
         <button className="btn-secondary" onClick={onBackToLobby}>← Lobby</button>
         <button className="btn-primary" onClick={onViewLeaderboard}>🏆 Leaderboard</button>
       </div>
+      {/* c332: test-account members only, so this never shows for real players. */}
+      {isTestAccount && (
+        <button
+          type="button"
+          className="mt-3 text-xs font-bold text-wordy-500 hover:underline disabled:opacity-50"
+          onClick={onReplay}
+        >
+          Replay (test account)
+        </button>
+      )}
     </div>
   )
 }
