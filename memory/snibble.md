@@ -1063,3 +1063,9 @@ c295-audit fix. `CompletedPanel.handleRematch` (`src/components/MatchView.jsx`) 
 ## 2026-08-16 — OpenMatchPanel is invite-aware (c297 follow-on)
 The creator-side open-match panel (`OpenMatchPanel`, `src/components/MatchView.jsx`) showed "Match posted / Waiting for someone to join from their lobby's match list" for EVERY open match — wrong for friend invites (including c297's rematch invites): a private invite never appears in anyone's lobby list, and only the invitee can join. Now when `match.invited_user_id` is set it reads "📨 Invite sent / Waiting for {username} to accept." Public matches keep the original 🪧 copy. MatchView's own profile fetch loads only creator+opponent, so `invited_user_id` was added to its `userIds` and a new `invitee` state threads down to the panel (falls back to "your friend" if the profile row is missing). useMatches already attached an `invitee` profile for the lobby (MultiplayerCard shows "📨 Invited {name}") — this brings MatchView to parity.
  **2026-08-22 (c339):** verified live in Chrome (invite fixture with triggers disabled via `session_replication_role=replica`, no push fired; public fixture unchanged) and pushed `40423ff` — auto-deployed. Quill posted.
+
+## 2026-09-24 — Test Accounts group (c332)
+Hub group `test-accounts` (Test + Claude test logins) is excluded from every leaderboard/stat; any MP game with a member seated is ignored for BOTH players; members get a "Replay (test account)" button on the daily finished screen and a replay overwrites the day's row (server-enforced). Check with `sq_is_test_account(uid)` / `sq_test_account_ids(uuid[])`. **Any new leaderboard/stat aggregate must add the exclusion.** Full detail on c332.
+
+## 2026-09-24 — Placeholder snail icon replaced (c379)
+`public/favicon.svg` (notification icon for all push types + tab/manifest icon) was the v0.1 scaffold snail; now the purple "S" letter tile matching sibling games. Commit `2c106aa`.
