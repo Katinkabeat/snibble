@@ -90,17 +90,18 @@ export default function MatchView({ user, matchId, onBack, onOpenMatch }) {
   // status flipped, completion) or when a play is inserted for this
   // match (opponent submitted). Without this, the screen stays frozen
   // until the user navigates away and back.
+  // Private Broadcast topic snibble:match:<id>, fed by the
+  // sn_broadcast_match_change trigger (sn_realtime_broadcast.sql).
+  // Payload: { table, event, match_id, user_id?, status }.
   useEffect(() => {
     if (!matchId) return
     let pollInterval = null
     const channel = supabase
-      .channel(`match_${matchId}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'sn_matches',
-          filter: `id=eq.${matchId}` }, refresh)
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'sn_match_round_plays',
-          filter: `match_id=eq.${matchId}` }, refresh)
+      .channel(`snibble:match:${matchId}`, { config: { private: true } })
+      .on('broadcast', { event: 'change' }, ({ payload }) => {
+        if (payload?.table === 'sn_matches' && payload.event === 'UPDATE') refresh()
+        else if (payload?.table === 'sn_match_round_plays' && payload.event === 'INSERT') refresh()
+      })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           if (!pollInterval) pollInterval = setInterval(refresh, 30000)

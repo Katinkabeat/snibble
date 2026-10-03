@@ -191,9 +191,10 @@ export function useMatches(userId) {
 
   // Realtime — refresh the lobby on any sn_matches row touching this
   // user (created by, opponent, invited) and on any round-play insert
-  // for matches they're in. Mirrors Rungles' subscribeLobby pattern.
-  // Subscriptions on tables not in the supabase_realtime publication
-  // silently no-op — the sn_matches_realtime migration adds them.
+  // by them. Private Broadcast topic snibble:user:<id>, fed by the
+  // sn_broadcast_match_change trigger (sn_realtime_broadcast.sql), which
+  // sends to creator, opponent and invitee. Payload:
+  // { table, event, match_id, user_id?, status }.
   useEffect(() => {
     if (!userId) return
     let pollInterval = null
@@ -203,19 +204,13 @@ export function useMatches(userId) {
       recountTimer = setTimeout(() => setReloadTick((t) => t + 1), 300)
     }
     const channel = supabase
-      .channel(`lobby_sn_matches_${userId}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'sn_matches',
-          filter: `creator_id=eq.${userId}` }, scheduleReload)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'sn_matches',
-          filter: `opponent_id=eq.${userId}` }, scheduleReload)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'sn_matches',
-          filter: `invited_user_id=eq.${userId}` }, scheduleReload)
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'sn_match_round_plays',
-          filter: `user_id=eq.${userId}` }, scheduleReload)
+      .channel(`snibble:user:${userId}`, { config: { private: true } })
+      .on('broadcast', { event: 'change' }, ({ payload }) => {
+        if (payload?.table === 'sn_matches') scheduleReload()
+        // Plays: only my own submissions, as before (INSERT only).
+        else if (payload?.table === 'sn_match_round_plays'
+          && payload.event === 'INSERT' && payload.user_id === userId) scheduleReload()
+      })
       .subscribe((status) => {
         // Fallback poll if the websocket dies — same belt-and-suspenders
         // pattern the hub uses on LandingPage.
