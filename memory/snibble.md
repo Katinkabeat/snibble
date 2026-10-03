@@ -1069,3 +1069,6 @@ Hub group `test-accounts` (Test + Claude test logins) is excluded from every lea
 
 ## 2026-09-24 — Placeholder snail icon replaced (c379)
 `public/favicon.svg` (notification icon for all push types + tab/manifest icon) was the v0.1 scaffold snail; now the purple "S" letter tile matching sibling games. Commit `2c106aa`.
+
+## 2026-10-03 — Realtime → Broadcast (c386, `c5e5770`)
+`supabase/migrations/sn_realtime_broadcast.sql`: trigger `sn_broadcast_match_change` on `sn_matches` (I/U/D) + `sn_match_round_plays` (INSERT) → `snibble:match:<id>` and `snibble:user:<uid>` for creator/opponent/invitee; policies `snibble_realtime_*`. `MatchView.jsx` refreshes on sn_matches UPDATE / plays INSERT; `useMatches.js` reloads on any sn_matches event or own play INSERT (same semantics as the old filters). sn_* tables dropped from the publication.
